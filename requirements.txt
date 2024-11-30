@@ -1,0 +1,6 @@
+certifi==2024.8.30
+pip-system-certs==4.0
+python-dotenv==1.0.1
+slack_bolt==1.21.2
+slack_sdk==3.33.4
+wrapt==1.17.0
