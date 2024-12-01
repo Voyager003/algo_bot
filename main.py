@@ -7,11 +7,13 @@ load_dotenv(verbose=True)
 
 app = App(token=os.environ["SLACK_BOT_TOKEN"])
 
+
 @app.message("hi")
 def say_hello(message, say):
     user = message['user']
     print(user)
     say(f"Hi there, <@{user}>!")
+
 
 @app.command("/알고풀이")
 def handle_some_command(ack, body, client):
@@ -82,7 +84,19 @@ def handle_some_command(ack, body, client):
         },
     )
 
+@app.view("submit_view")
+def handle_view_submission_events(ack, body, client):
+    channel_id = body["view"]["private_metadata"]
+    if channel_id != "C081J5M7UUC":
+        ack(
+            response_action="errors",
+            errors={"code_block_id": "#오늘도한문제풀어또 채널에서만 제출할 수 있습니다."},
+        )
+        return None
 
+    sentence = body["view"]["state"]["values"]["code_block_id"]["input_action_id"][
+        "value"
+    ]
 
 
 if __name__ == "__main__":
