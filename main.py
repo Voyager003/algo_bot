@@ -1,22 +1,17 @@
 import os
+import csv
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 
 app = App(token=os.environ["SLACK_BOT_TOKEN"])
 
-
-@app.message("hi")
-def say_hello(message, say):
-    user = message['user']
-    print(user)
-    say(f"Hi there, <@{user}>!")
-
-
 @app.command("/알고풀이")
-def handle_some_command(ack, body, client):
+def submit_algo(ack, body, client):
     ack()
     client.views_open(
         trigger_id=body["trigger_id"],
@@ -47,24 +42,6 @@ def handle_some_command(ack, body, client):
                 },
                 {
                     "type": "input",
-                    "block_id": "address_block_id",
-                    "label": {
-                        "type": "plain_text",
-                        "text": "문제 풀이",
-                    },
-                    "optional": True,
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "input_action_id",
-                        "multiline": False,
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "문제의 풀이를 담은 블로그 주소를 입력해주세요.",
-                        },
-                    },
-                },
-                {
-                    "type": "input",
                     "block_id": "code_block_id",
                     "label": {
                         "type": "plain_text",
@@ -84,8 +61,35 @@ def handle_some_command(ack, body, client):
         },
     )
 
+def handle_user_csv(user_id, user_name, link, created_at):
+    # Data 디렉토리 생성 (없는 경우)
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)
+
+    # 사용자 이름으로 된 CSV 파일 경로 생성
+    csv_filename = os.path.join(data_dir, f"{user_name}.csv")
+
+    # CSV 파일이 존재하지 않으면 헤더와 함께 새로 생성
+    if not os.path.exists(csv_filename):
+        with open(csv_filename, mode="w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([
+                "user_name",
+                "link",
+                "created_at",
+            ])
+
+    # 사용자 데이터 추가
+    with open(csv_filename, mode="a", newline="", encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow([
+            user_name,
+            link,
+            created_at,
+        ])
+
 @app.view("submit_view")
-def handle_view_submission_events(ack, body, client):
+def handle_view_algo(ack, body, client):
     channel_id = body["view"]["private_metadata"]
     if channel_id != "C081J5M7UUC":
         ack(
@@ -93,11 +97,19 @@ def handle_view_submission_events(ack, body, client):
             errors={"code_block_id": "#오늘도한문제풀어또 채널에서만 제출할 수 있습니다."},
         )
         return None
+    ack()
 
-    sentence = body["view"]["state"]["values"]["code_block_id"]["input_action_id"][
-        "value"
-    ]
+    # 데이터 추출
+    user_id = body["user"]["id"]
+    user_info = client.users_info(user=user_id)
+    user_name = user_info["user"]["real_name"]
+    link = body["view"]["state"]["values"]["link_block_id"]["input_action_id"]["value"]
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    handle_user_csv(user_id, user_name, link, created_at)
+    # 완료메시지 가공 및 슬랙으로 전송
+    text = f">>> *{user_name}*님이 문제를 제출했습니다!"
+    client.chat_postMessage(channel=channel_id, text=text)
 
 if __name__ == "__main__":
     handler = SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"])
