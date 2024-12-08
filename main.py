@@ -2,12 +2,15 @@ import os
 import csv
 import base64
 import pandas as pd
+import calendar
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from dotenv import load_dotenv
-from github import Github, InputGitAuthor
+from github import Github
+
+
 
 load_dotenv(verbose=True)
 
@@ -385,6 +388,142 @@ def save_streak_data(user_id, user_name, problem_link, code):
         writer.writerow(new_data)
 
         return new_data
+
+@app.command("/알고조회")
+def view_streak(ack, body, client):
+    ack()
+
+    user_id = body["user_id"]
+    user_name = body["user_name"]
+    csv_path = f'streak/{user_name}.csv'
+
+    if not os.path.exists(csv_path):
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text="아직 제출한 알고리즘 문제가 없습니다. 첫 문제를 풀어보세요! 💪"
+        )
+        return
+
+    try:
+        df = pd.read_csv(csv_path)
+        if df.empty:
+            client.chat_postEphemeral(
+                channel=body["channel_id"],
+                user=user_id,
+                text="아직 제출한 알고리즘 문제가 없습니다. 첫 문제를 풀어보세요! 💪"
+            )
+            return
+
+        # 날짜 데이터 변환 및 정렬
+        df['submit_date'] = pd.to_datetime(df['submit_date'])
+        df = df.sort_values('submit_date')
+        submission_dates = set(df['submit_date'].dt.date)
+
+        # 현재 날짜와 월 정보
+        today = datetime.now().date()
+        month_start = today.replace(day=1)
+        _, last_day = calendar.monthrange(today.year, today.month)
+        month_end = today.replace(day=last_day)
+
+        # 이전 달과 다음 달 정보
+        if month_start.month == 1:
+            prev_month = month_start.replace(year=month_start.year-1, month=12)
+        else:
+            prev_month = month_start.replace(month=month_start.month-1)
+
+        if month_start.month == 12:
+            next_month = month_start.replace(year=month_start.year+1, month=1)
+        else:
+            next_month = month_start.replace(month=month_start.month+1)
+
+        # 달력의 시작일과 종료일 계산
+        calendar_start = month_start - timedelta(days=(month_start.weekday() + 1) % 7)
+        calendar_end = month_end + timedelta(days=(6 - month_end.weekday()))
+
+        # 달력 날짜 생성
+        dates = []
+        current_date = calendar_start
+        while current_date <= calendar_end:
+            dates.append(current_date)
+            current_date += timedelta(days=1)
+
+        # 달력 생성
+        calendar_days = []
+        for date in dates:
+            if date.month != month_start.month:
+                calendar_days.append("　")  # 다른 달의 날짜
+            elif date > today:
+                calendar_days.append("⬜")  # 미래 날짜
+            elif date in submission_dates:  # 여기서 비교가 제대로 되는지 확인
+                print(f"Found submission for date: {date}")  # 디버깅용
+                calendar_days.append("🟩")  # 제출한 날짜
+            else:
+                calendar_days.append("⬜")
+
+        # 주 단위로 나누기
+        weeks = [calendar_days[i:i+7] for i in range(0, len(calendar_days), 7)]
+        calendar_text = ""
+        for week in weeks:
+            calendar_text += " ".join(week) + "\n"
+
+        # 전체 기간의 스트릭 계산
+        all_submission_dates = sorted(list(submission_dates))
+        current_streak = 0
+        max_streak = 0
+        temp_streak = 0
+
+        for i in range(len(all_submission_dates)):
+            if i == 0:
+                temp_streak = 1
+            else:
+                diff = (all_submission_dates[i] - all_submission_dates[i-1]).days
+                if diff == 1:  # 연속된 날짜
+                    temp_streak += 1
+                else:
+                    temp_streak = 1
+
+            max_streak = max(max_streak, temp_streak)
+
+            # 오늘 또는 어제 제출했다면 current_streak 갱신
+            if i == len(all_submission_dates) - 1:
+                days_since_last = (today - all_submission_dates[i]).days
+                if days_since_last <= 1:
+                    current_streak = temp_streak
+                else:
+                    current_streak = 0
+
+        # 이번 달 제출 횟수
+        monthly_submissions = len(df[
+                                      (df['submit_date'].dt.year == today.year) &
+                                      (df['submit_date'].dt.month == today.month)
+                                      ])
+
+        # 총 제출 횟수
+        total_submissions = len(df)
+
+        message = f"""*{today.year}년 {today.month}월 스트릭:*
+일 월 화 수 목 금 토
+{calendar_text}
+이번 달 제출: {monthly_submissions}개
+총 제출: {total_submissions}개
+현재 연속 제출: {current_streak}일
+최대 연속 제출: {max_streak}일
+"""
+
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=message
+        )
+
+    except Exception as e:
+        print(f"Error: {e}")  # 디버깅용
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=f"❌ 조회 중 오류가 발생했습니다: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
