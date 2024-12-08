@@ -1,6 +1,7 @@
 import os
 import csv
 import base64
+import pandas as pd
 
 from datetime import datetime
 from slack_bolt import App
@@ -232,6 +233,27 @@ def handle_submission(ack, body, view, client):
     need_review = values["need_review"]["review_select"]["selected_option"]["value"] == "yes"
 
     try:
+        # 스트릭 데이터 저장
+        streak_data = save_streak_data(
+            user_id=body["user"]["id"],
+            user_name=body["user"]["username"],
+            problem_link=problem_link,
+            code=code
+        )
+
+        # PR 생성 후 메시지에 스트릭 정보 포함
+        client.chat_postMessage(
+            channel=channel_id,
+            text=f"""✅ Pull Request가 생성되었습니다!\n*<{problem_link}|PR 보러가기>*
+               
+        현재까지 {streak_data['submit_count']}개의 문제를 제출하셨습니다.
+        {streak_data['current_streak']}일 연속으로 문제를 풀고 계십니다!
+        (최대 {streak_data['max_streak']}일 연속 제출)
+        작성하신 리뷰: {streak_data['review_count']}개
+               """
+        )
+
+
         # Github 연동
         g = Github(token)
 
@@ -306,6 +328,64 @@ def get_file_extension(language):
         "rust": "rs"
     }
     return extensions.get(language.lower(), "txt")
+
+def init_streak_directory():
+    if not os.path.exists('streak'):
+        os.makedirs('streak')
+
+def save_streak_data(user_id, user_name, problem_link, code):
+    """사용자의 스트릭 데이터를 CSV에 저장"""
+    init_streak_directory()
+    today = datetime.now().date()
+    csv_path = f'streak/{user_name}.csv'
+
+    # 새로운 제출 데이터
+    new_data = {
+        'user_id': user_id,
+        'user_name': user_name,
+        'submit_date': today.strftime('%Y-%m-%d'),
+        'problem_link': problem_link,
+        'point': 10,  # 기본 포인트
+        'total_point': 0,
+        'submit_count': 1,  # 총 제출 수
+        'current_streak': 1,  # 현재 연속 제출
+        'max_streak': 1,     # 최대 연속 제출
+        'review_count': 0    # 리뷰 수
+    }
+
+    # 파일이 존재하지 않으면 새로 생성
+    if not os.path.exists(csv_path):
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=new_data.keys())
+            writer.writeheader()
+            writer.writerow(new_data)
+        return new_data
+
+    # 기존 파일이 있다면 마지막 데이터를 읽어서 업데이트
+    df = pd.read_csv(csv_path)
+    if not df.empty:
+        last_row = df.iloc[-1]
+        last_submit = datetime.strptime(last_row['submit_date'], '%Y-%m-%d').date()
+        days_diff = (today - last_submit).days
+
+        # 스트릭 및 카운트 업데이트
+        if days_diff == 1:  # 연속 제출
+            new_data['current_streak'] = last_row['current_streak'] + 1
+        else:
+            new_data['current_streak'] = 1  # 스트릭 리셋
+
+        new_data['max_streak'] = max(new_data['current_streak'], last_row['max_streak'])
+        new_data['total_point'] = last_row['total_point'] + new_data['point']
+        new_data['submit_count'] = last_row['submit_count'] + 1
+        new_data['review_count'] = last_row['review_count']  # 리뷰 수는 유지
+
+    # 새로운 데이터 추가
+    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=new_data.keys())
+        writer.writerow(new_data)
+
+        return new_data
+
 
 if __name__ == "__main__":
     handler = SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN"))
