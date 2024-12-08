@@ -336,6 +336,32 @@ def init_streak_directory():
     if not os.path.exists('streak'):
         os.makedirs('streak')
 
+def calculate_points(df, today):
+    """포인트 계산 함수"""
+    base_points = 10  # 기본 점수
+    bonus_points = 0
+
+    if not df.empty:
+        # 연속 제출 보너스 계산
+        current_streak = df['current_streak'].iloc[-1]
+        if current_streak >= 30:
+            bonus_points += 20
+        elif current_streak >= 14:
+            bonus_points += 15
+        elif current_streak >= 7:
+            bonus_points += 10
+        elif current_streak >= 3:
+            bonus_points += 5
+
+        # 주간 제출 보너스 계산
+        week_start = today - timedelta(days=today.weekday())
+        week_submissions = df[df['submit_date'] >= week_start]['submit_date'].nunique()
+        if week_submissions >= 5:
+            bonus_points += 15
+
+    total_points = base_points + bonus_points
+    return total_points, base_points, bonus_points
+
 def save_streak_data(user_id, user_name, problem_link, code):
     init_streak_directory()
     today = datetime.now().date()
@@ -343,14 +369,17 @@ def save_streak_data(user_id, user_name, problem_link, code):
     weekday = submit_date.strftime('%A')
     csv_path = f'streak/{user_name}.csv'
 
+    # 초기 데이터 구조
     new_data = {
         'user_id': user_id,
         'user_name': user_name,
         'submit_date': submit_date.strftime('%Y-%m-%d'),
         'weekday': weekday,
         'problem_link': problem_link,
-        'point': 10,
-        'total_point': 0,
+        'base_points': 10,
+        'bonus_points': 0,
+        'total_points': 10,
+        'accumulated_points': 10,
         'submit_count': 1,
         'current_streak': 1,
         'max_streak': 1,
@@ -374,7 +403,7 @@ def save_streak_data(user_id, user_name, problem_link, code):
         # 마지막 제출일과의 차이 계산
         days_diff = (today - last_submit).days
 
-        # 스트릭 계산 개선
+        # 스트릭 계산
         if days_diff == 1:  # 연속 제출
             new_data['current_streak'] = df['current_streak'].iloc[-1] + 1
             new_data['max_streak'] = max(new_data['current_streak'], df['max_streak'].iloc[-1])
@@ -385,7 +414,13 @@ def save_streak_data(user_id, user_name, problem_link, code):
             new_data['current_streak'] = 1
             new_data['max_streak'] = df['max_streak'].iloc[-1]
 
-        new_data['total_point'] = df['total_point'].iloc[-1] + new_data['point']
+        # 포인트 계산
+        total_points, base_points, bonus_points = calculate_points(df, today)
+        new_data['base_points'] = base_points
+        new_data['bonus_points'] = bonus_points
+        new_data['total_points'] = total_points
+        new_data['accumulated_points'] = df['accumulated_points'].iloc[-1] + total_points
+
         new_data['submit_count'] = df['submit_count'].iloc[-1] + 1
         new_data['review_count'] = df['review_count'].iloc[-1]
 
@@ -472,11 +507,9 @@ def view_streak(ack, body, client):
                     current_streak = 0
 
         # 8. 결과 메시지 생성
-        message = f"""*이번 주 스트릭:*
-일 월 화 수 목 금 토
+        message = f"""*이번 주의 스트릭:*
 {" ".join(streak)}
 
-이번 주 제출: {this_week_submissions}개
 총 제출: {total_submissions}개
 현재 연속 제출: {current_streak}일
 최대 연속 제출: {max_streak}일
