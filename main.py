@@ -17,13 +17,11 @@ if not os.path.exists('tokens'):
 
 @app.command("/알고토큰")
 def handle_token_command(ack, body, client):
-    # 커맨드 접수 확인
     ack()
 
     user_name = body['user_name']
     csv_path = f'tokens/{user_name}.csv'
 
-    # 이미 토큰이 존재하는지 확인
     if os.path.exists(csv_path):
         client.chat_postEphemeral(
             channel=body['channel_id'],
@@ -209,10 +207,8 @@ def handle_submit_command(ack, body, client):
 def handle_submission(ack, body, view, client):
     ack()
 
-    user_id = body["user"]["id"]
     channel_id = body["user"]["id"]
     user_name = body["user"]["username"]
-    github_username = body["user"]["username"]
 
     # 토큰 읽기
     try:
@@ -243,7 +239,6 @@ def handle_submission(ack, body, view, client):
         github_username = github_user.login
 
         # 사용자의 fork된 레포지토리 가져오기
-        archive_repo = g.get_repo("geultto/daily-solvetto")
         user_fork = g.get_repo(f"{github_username}/daily-solvetto")
 
         # 브랜치 이름 생성
@@ -262,6 +257,10 @@ def handle_submission(ack, body, view, client):
         file_path = f"{problem_name}/{language.lower()}/solution.{get_file_extension(language)}"
         content = base64.b64encode(code.encode('utf-8')).decode('utf-8')
 
+        geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
+        g_geultto = Github(geultto_token)
+        archive_repo = g_geultto.get_repo("geultto/daily-solvetto")
+
         # 파일 생성
         file_result = user_fork.create_file(
             path=file_path,
@@ -271,25 +270,24 @@ def handle_submission(ack, body, view, client):
         )
 
         # PR 생성
-        pr = user_fork.create_pull(
-            title=f"[{language}] {problem_name} 솔루션",
-            body=f"""
-    문제: {problem_link}
-    작성자: @{github_username}
-    언어: {language}
-
-    이 PR은 Slack에서 자동으로 생성되었습니다.
-    파일: {file_path}
-    커밋: {file_result['commit'].sha}
-            """,
+        pr = archive_repo.create_pull(
+            base="main",
             head=f"{github_username}:{branch_name}",
-            base="main"
+            body=f"""
+        문제: {problem_link}
+        작성자: @{github_username}
+        언어: {language}
+        
+        이 PR은 Slack에서 자동으로 생성되었습니다.
+        파일: {file_path}
+        커밋: {file_result['commit'].sha}
+                """
         )
 
-        # PR이 성공적으로 생성되면 메시지 전송
+        # PR 생성 성공 메시지
         client.chat_postMessage(
             channel=channel_id,
-            text=f"✅ Pull Request가 생성되었습니다!\n*<{pr.html_url}|PR 보러가기>*"
+            text=f"✅ Pull Request가 생성되었습니다! 코드 리뷰 요청을 완료했습니다.\n*<{pr.html_url}|PR 보러가기>*"
         )
 
     except Exception as e:
