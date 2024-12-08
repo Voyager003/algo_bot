@@ -340,20 +340,23 @@ def save_streak_data(user_id, user_name, problem_link, code):
     """사용자의 스트릭 데이터를 CSV에 저장"""
     init_streak_directory()
     today = datetime.now().date()
+    submit_date = datetime.now()
+    weekday = submit_date.strftime('%A')  # 요일을 문자열로 저장 (Monday, Tuesday, ...)
     csv_path = f'streak/{user_name}.csv'
 
     # 새로운 제출 데이터
     new_data = {
         'user_id': user_id,
         'user_name': user_name,
-        'submit_date': today.strftime('%Y-%m-%d'),
+        'submit_date': submit_date.strftime('%Y-%m-%d'),
+        'weekday': weekday,
         'problem_link': problem_link,
-        'point': 10,  # 기본 포인트
+        'point': 10,
         'total_point': 0,
-        'submit_count': 1,  # 총 제출 수
-        'current_streak': 1,  # 현재 연속 제출
-        'max_streak': 1,     # 최대 연속 제출
-        'review_count': 0    # 리뷰 수
+        'submit_count': 1,
+        'current_streak': 1,
+        'max_streak': 1,
+        'review_count': 0
     }
 
     # 파일이 존재하지 않으면 새로 생성
@@ -406,6 +409,7 @@ def view_streak(ack, body, client):
         return
 
     try:
+        # 1. CSV 파일 읽기
         df = pd.read_csv(csv_path)
         if df.empty:
             client.chat_postEphemeral(
@@ -415,97 +419,61 @@ def view_streak(ack, body, client):
             )
             return
 
-        # 날짜 데이터 변환 및 정렬
-        df['submit_date'] = pd.to_datetime(df['submit_date'])
-        df = df.sort_values('submit_date')
-        submission_dates = set(df['submit_date'].dt.date)
+        # 2. 날짜 데이터 처리
+        df['submit_date'] = pd.to_datetime(df['submit_date']).dt.date  # datetime.date 객체로 변환
+        submit_dates = set(df['submit_date'])  # 제출된 날짜들의 집합
 
-        # 현재 날짜와 월 정보
+        # 3. 이번 주의 날짜 범위 계산 (수정)
         today = datetime.now().date()
-        month_start = today.replace(day=1)
-        _, last_day = calendar.monthrange(today.year, today.month)
-        month_end = today.replace(day=last_day)
+        sunday = today - timedelta(days=today.weekday() + 1)  # 이번 주 일요일 계산 (일요일 = 6에서 보정)
 
-        # 이전 달과 다음 달 정보
-        if month_start.month == 1:
-            prev_month = month_start.replace(year=month_start.year-1, month=12)
-        else:
-            prev_month = month_start.replace(month=month_start.month-1)
+        if today.weekday() == 6:  # 오늘이 일요일이면 sunday는 오늘
+            sunday = today
 
-        if month_start.month == 12:
-            next_month = month_start.replace(year=month_start.year+1, month=1)
-        else:
-            next_month = month_start.replace(month=month_start.month+1)
+        # 4. 이번 주 전체 날짜 생성
+        week_dates = [sunday + timedelta(days=i) for i in range(7)]
 
-        # 달력의 시작일과 종료일 계산
-        calendar_start = month_start - timedelta(days=(month_start.weekday() + 1) % 7)
-        calendar_end = month_end + timedelta(days=(6 - month_end.weekday()))
-
-        # 달력 날짜 생성
-        dates = []
-        current_date = calendar_start
-        while current_date <= calendar_end:
-            dates.append(current_date)
-            current_date += timedelta(days=1)
-
-        # 달력 생성
-        calendar_days = []
-        for date in dates:
-            if date.month != month_start.month:
-                calendar_days.append("　")  # 다른 달의 날짜
-            elif date > today:
-                calendar_days.append("⬜")  # 미래 날짜
-            elif date in submission_dates:  # 여기서 비교가 제대로 되는지 확인
-                print(f"Found submission for date: {date}")  # 디버깅용
-                calendar_days.append("🟩")  # 제출한 날짜
+        # 5. 각 날짜별로 제출 여부 확인하여 스트릭 표시
+        streak = []
+        for date in week_dates:
+            if date in submit_dates:
+                streak.append("🟩")  # 제출한 날짜는 초록색
             else:
-                calendar_days.append("⬜")
+                streak.append("⬜")  # 미제출 날짜는 흰색
 
-        # 주 단위로 나누기
-        weeks = [calendar_days[i:i+7] for i in range(0, len(calendar_days), 7)]
-        calendar_text = ""
-        for week in weeks:
-            calendar_text += " ".join(week) + "\n"
+        # 6. 통계 계산
+        this_week_submissions = len([d for d in submit_dates if sunday <= d <= today])
+        total_submissions = len(df)
 
-        # 전체 기간의 스트릭 계산
-        all_submission_dates = sorted(list(submission_dates))
+        # 7. 연속 제출 계산
+        sorted_dates = sorted(list(submit_dates))
         current_streak = 0
         max_streak = 0
         temp_streak = 0
 
-        for i in range(len(all_submission_dates)):
+        for i, date in enumerate(sorted_dates):
             if i == 0:
                 temp_streak = 1
             else:
-                diff = (all_submission_dates[i] - all_submission_dates[i-1]).days
-                if diff == 1:  # 연속된 날짜
+                if (date - sorted_dates[i-1]).days == 1:
                     temp_streak += 1
                 else:
                     temp_streak = 1
 
             max_streak = max(max_streak, temp_streak)
 
-            # 오늘 또는 어제 제출했다면 current_streak 갱신
-            if i == len(all_submission_dates) - 1:
-                days_since_last = (today - all_submission_dates[i]).days
-                if days_since_last <= 1:
+            if i == len(sorted_dates) - 1:  # 마지막 제출
+                if (today - date).days <= 1:
                     current_streak = temp_streak
                 else:
                     current_streak = 0
 
-        # 이번 달 제출 횟수
-        monthly_submissions = len(df[
-                                      (df['submit_date'].dt.year == today.year) &
-                                      (df['submit_date'].dt.month == today.month)
-                                      ])
-
-        # 총 제출 횟수
-        total_submissions = len(df)
-
-        message = f"""*{today.year}년 {today.month}월 스트릭:*
+        # 8. 결과 메시지 생성
+        message = f"""*이번 주 스트릭:*
 일 월 화 수 목 금 토
-{calendar_text}
-이번 달 제출: {monthly_submissions}개
+{" ".join(streak)}
+
+이번 주 제출: {this_week_submissions}개
 총 제출: {total_submissions}개
 현재 연속 제출: {current_streak}일
 최대 연속 제출: {max_streak}일
@@ -518,7 +486,6 @@ def view_streak(ack, body, client):
         )
 
     except Exception as e:
-        print(f"Error: {e}")  # 디버깅용
         client.chat_postEphemeral(
             channel=body["channel_id"],
             user=user_id,
