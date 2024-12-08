@@ -337,14 +337,12 @@ def init_streak_directory():
         os.makedirs('streak')
 
 def save_streak_data(user_id, user_name, problem_link, code):
-    """사용자의 스트릭 데이터를 CSV에 저장"""
     init_streak_directory()
     today = datetime.now().date()
     submit_date = datetime.now()
-    weekday = submit_date.strftime('%A')  # 요일을 문자열로 저장 (Monday, Tuesday, ...)
+    weekday = submit_date.strftime('%A')
     csv_path = f'streak/{user_name}.csv'
 
-    # 새로운 제출 데이터
     new_data = {
         'user_id': user_id,
         'user_name': user_name,
@@ -359,7 +357,6 @@ def save_streak_data(user_id, user_name, problem_link, code):
         'review_count': 0
     }
 
-    # 파일이 존재하지 않으면 새로 생성
     if not os.path.exists(csv_path):
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=new_data.keys())
@@ -367,30 +364,36 @@ def save_streak_data(user_id, user_name, problem_link, code):
             writer.writerow(new_data)
         return new_data
 
-    # 기존 파일이 있다면 마지막 데이터를 읽어서 업데이트
+    # 기존 데이터 읽기 및 정렬
     df = pd.read_csv(csv_path)
     if not df.empty:
-        last_row = df.iloc[-1]
-        last_submit = datetime.strptime(last_row['submit_date'], '%Y-%m-%d').date()
+        df['submit_date'] = pd.to_datetime(df['submit_date'])
+        df = df.sort_values('submit_date')
+        last_submit = df['submit_date'].iloc[-1].date()
+
+        # 마지막 제출일과의 차이 계산
         days_diff = (today - last_submit).days
 
-        # 스트릭 및 카운트 업데이트
+        # 스트릭 계산 개선
         if days_diff == 1:  # 연속 제출
-            new_data['current_streak'] = last_row['current_streak'] + 1
-        else:
-            new_data['current_streak'] = 1  # 스트릭 리셋
+            new_data['current_streak'] = df['current_streak'].iloc[-1] + 1
+            new_data['max_streak'] = max(new_data['current_streak'], df['max_streak'].iloc[-1])
+        elif days_diff == 0:  # 같은 날 제출
+            new_data['current_streak'] = df['current_streak'].iloc[-1]
+            new_data['max_streak'] = df['max_streak'].iloc[-1]
+        else:  # 연속 스트릭 끊김
+            new_data['current_streak'] = 1
+            new_data['max_streak'] = df['max_streak'].iloc[-1]
 
-        new_data['max_streak'] = max(new_data['current_streak'], last_row['max_streak'])
-        new_data['total_point'] = last_row['total_point'] + new_data['point']
-        new_data['submit_count'] = last_row['submit_count'] + 1
-        new_data['review_count'] = last_row['review_count']  # 리뷰 수는 유지
+        new_data['total_point'] = df['total_point'].iloc[-1] + new_data['point']
+        new_data['submit_count'] = df['submit_count'].iloc[-1] + 1
+        new_data['review_count'] = df['review_count'].iloc[-1]
 
-    # 새로운 데이터 추가
     with open(csv_path, 'a', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=new_data.keys())
         writer.writerow(new_data)
 
-        return new_data
+    return new_data
 
 @app.command("/알고조회")
 def view_streak(ack, body, client):
