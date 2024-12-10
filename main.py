@@ -240,7 +240,7 @@ def show_review_modal(body, client):
                         "type": "plain_text_input",
                         "action_id": "request_input",
                         "multiline": True,
-                        "placeholder": {"type": "plain_text", "text": "리뷰 받고 싶은 부분을 작성해주세요"}
+                        "placeholder": {"type": "plain_text", "text": "중점적으로 리뷰받고 싶은 부분을 적어주세요."}
                     },
                     "label": {"type": "plain_text", "text": "리뷰 요청 사항"}
                 }
@@ -263,7 +263,7 @@ def show_no_review_modal(body, client):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "directory_input",
-                        "placeholder": {"type": "plain_text", "text": "예: ChoYoonUn/javascript"}
+                        "placeholder": {"type": "plain_text", "text": "디렉토리 명을 지정해주세요."}
                     },
                     "label": {"type": "plain_text", "text": "디렉토리 경로"}
                 },
@@ -343,6 +343,13 @@ def handle_submission(body, view, client, needs_review):
         code = values["code"]["code_input"]["value"]  # 코드 추출
         review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
 
+        streak_data = save_streak_data(
+            user_id=body["user"]["id"],
+            user_name=body["user"]["username"],
+            problem_link=problem_link,
+            code=code
+        )
+
         # PR 본문 생성
         if needs_review:
             pr_body = f"""문제: [{problem_name}]({problem_link})
@@ -376,12 +383,6 @@ def handle_submission(body, view, client, needs_review):
             client.chat_postMessage(
                 channel=public_channel_id,  # 공개 채널에 메시지 전송
                 text=f"✅ [{problem_name}] 문제가 제출되었습니다!"
-            )
-
-            # 스트릭 정보를 DM으로 전송
-            client.chat_postMessage(
-                channel=channel_id,  # DM으로 스트릭 정보 전송
-                text=view_streak_message(body["user"]["id"])
             )
 
     except Exception as e:
