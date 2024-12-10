@@ -2,15 +2,13 @@ import os
 import csv
 import base64
 import pandas as pd
-import calendar
+import time
 
 from datetime import datetime, timedelta
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from dotenv import load_dotenv
 from github import Github
-
-
 
 load_dotenv(verbose=True)
 
@@ -112,72 +110,14 @@ def handle_token_submission(ack, body, view, client):
 @app.command("/알고풀이")
 def handle_submit_command(ack, body, client):
     ack()
-
     try:
         client.views_open(
             trigger_id=body["trigger_id"],
             view={
                 "type": "modal",
-                "callback_id": "algorithm_submission",
+                "callback_id": "review_selection",
                 "title": {"type": "plain_text", "text": "알고리즘 풀이 제출"},
-                "submit": {"type": "plain_text", "text": "제출"},
-                "close": {"type": "plain_text", "text": "취소"},
                 "blocks": [
-                    {
-                        "type": "input",
-                        "block_id": "problem_link",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "link_input",
-                            "placeholder": {"type": "plain_text", "text": "문제 링크를 입력하세요"}
-                        },
-                        "label": {"type": "plain_text", "text": "문제 링크"}
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "problem_name",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "name_input",
-                            "placeholder": {"type": "plain_text", "text": "문제 이름을 입력하세요"}
-                        },
-                        "label": {"type": "plain_text", "text": "문제 이름"}
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "language",
-                        "element": {
-                            "type": "static_select",
-                            "action_id": "language_select",
-                            "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
-                            "options": [
-                                {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
-                                for lang in ["Java", "JavaScript", "Python", "Swift", "Kotlin", "Rust"]
-                            ]
-                        },
-                        "label": {"type": "plain_text", "text": "언어 선택"}
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "code",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "code_input",
-                            "multiline": True,
-                            "placeholder": {"type": "plain_text", "text": "코드를 입력하세요"}
-                        },
-                        "label": {"type": "plain_text", "text": "코드"}
-                    },
-                    {
-                        "type": "input",
-                        "block_id": "submission_text",
-                        "element": {
-                            "type": "plain_text_input",
-                            "action_id": "text_input",
-                            "placeholder": {"type": "plain_text", "text": "채널에 표시될 제출 문구를 입력하세요"}
-                        },
-                        "label": {"type": "plain_text", "text": "제출 문구"}
-                    },
                     {
                         "type": "input",
                         "block_id": "need_review",
@@ -186,7 +126,7 @@ def handle_submit_command(ack, body, client):
                             "action_id": "review_select",
                             "options": [
                                 {
-                                    "text": {"type": "plain_text", "text": "네! 필요해요"},
+                                    "text": {"type": "plain_text", "text": "예! 리뷰가 필요해요"},
                                     "value": "yes"
                                 },
                                 {
@@ -197,7 +137,8 @@ def handle_submit_command(ack, body, client):
                         },
                         "label": {"type": "plain_text", "text": "코드 리뷰가 필요하신가요?"}
                     }
-                ]
+                ],
+                "submit": {"type": "plain_text", "text": "다음"},
             }
         )
     except Exception as e:
@@ -207,14 +148,168 @@ def handle_submit_command(ack, body, client):
             text=f"Modal 생성 중 오류가 발생했습니다: {str(e)}"
         )
 
-@app.view("algorithm_submission")
-def handle_submission(ack, body, view, client):
+@app.view("review_selection")
+def handle_review_selection(ack, body, client):
     ack()
+    need_review = body["view"]["state"]["values"]["need_review"]["review_select"]["selected_option"]["value"] == "yes"
+
+    if need_review:
+        show_review_modal(body, client)
+    else:
+        show_no_review_modal(body, client)
+
+def show_review_modal(body, client):
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "submission_with_review",
+            "title": {"type": "plain_text", "text": "알고리즘 풀이 제출"},
+            "submit": {"type": "plain_text", "text": "제출"},
+            "blocks": [
+                {
+                    "type": "input",
+                    "block_id": "directory_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "directory_input",
+                        "placeholder": {"type": "plain_text", "text": "예: ChoYoonUn/javascript"}
+                    },
+                    "label": {"type": "plain_text", "text": "디렉토리 경로"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "problem_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "problem_input",
+                        "placeholder": {"type": "plain_text", "text": "문제 이름을 입력하세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "문제"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "problem_link",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "link_input",
+                        "placeholder": {"type": "plain_text", "text": "문제 링크를 입력하세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "문제 링크"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "language",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "language_select",
+                        "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
+                        "options": [
+                            {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
+                            for lang in ["Java", "JavaScript", "Python", "Swift", "Kotlin", "Rust"]
+                        ]
+                    },
+                    "label": {"type": "plain_text", "text": "언어"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "solution_process",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "process_input",
+                        "multiline": True,
+                        "placeholder": {"type": "plain_text", "text": "문제 풀이 과정을 설명해주세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "풀이 과정"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "review_request",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "request_input",
+                        "multiline": True,
+                        "placeholder": {"type": "plain_text", "text": "리뷰 받고 싶은 부분을 작성해주세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "리뷰 요청 사항"}
+                }
+            ]
+        }
+    )
+
+def show_no_review_modal(body, client):
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "submission_without_review",
+            "title": {"type": "plain_text", "text": "알고리즘 풀이 제출"},
+            "submit": {"type": "plain_text", "text": "제출"},
+            "blocks": [
+                {
+                    "type": "input",
+                    "block_id": "directory_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "directory_input",
+                        "placeholder": {"type": "plain_text", "text": "예: ChoYoonUn/javascript"}
+                    },
+                    "label": {"type": "plain_text", "text": "디렉토리 경로"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "problem_name",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "problem_input",
+                        "placeholder": {"type": "plain_text", "text": "문제 이름을 입력하세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "문제"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "problem_link",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "link_input",
+                        "placeholder": {"type": "plain_text", "text": "문제 링크를 입력하세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "문제 링크"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "language",
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "language_select",
+                        "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
+                        "options": [
+                            {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
+                            for lang in ["Java", "JavaScript", "Python", "Swift", "Kotlin", "Rust"]
+                        ]
+                    },
+                    "label": {"type": "plain_text", "text": "언어"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "solution_process",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "process_input",
+                        "multiline": True,
+                        "placeholder": {"type": "plain_text", "text": "문제 풀이 과정을 설명해주세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "풀이 과정"}
+                }
+            ]
+        }
+    )
+
+def handle_submission(body, view, client, needs_review):
 
     channel_id = body["user"]["id"]
     user_name = body["user"]["username"]
 
-    # 토큰 읽기
     try:
         with open(f'tokens/{user_name}.csv', 'r') as file:
             reader = csv.reader(file)
@@ -226,102 +321,139 @@ def handle_submission(ack, body, view, client):
         )
         return
 
-    # 입력값 추출
-    values = view["state"]["values"]
-    problem_link = values["problem_link"]["link_input"]["value"]
-    problem_name = values["problem_name"]["name_input"]["value"]
-    language = values["language"]["language_select"]["selected_option"]["value"]
-    code = values["code"]["code_input"]["value"]
-    submission_text = values["submission_text"]["text_input"]["value"]
-    need_review = values["need_review"]["review_select"]["selected_option"]["value"] == "yes"
-
     try:
-        # 스트릭 데이터 저장
-        streak_data = save_streak_data(
-            user_id=body["user"]["id"],
-            user_name=body["user"]["username"],
-            problem_link=problem_link,
-            code=code
-        )
+        # 입력값 추출
+        values = view["state"]["values"]
+        directory = values["directory_name"]["directory_input"]["value"]
+        problem_name = values["problem_name"]["problem_input"]["value"]
+        problem_link = values["problem_link"]["link_input"]["value"]
+        language = values["language"]["language_select"]["selected_option"]["value"]
+        solution_process = values["solution_process"]["process_input"]["value"]
+        review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
 
-        # PR 생성 후 메시지에 스트릭 정보 포함
-        client.chat_postMessage(
-            channel=channel_id,
-            text=f"""✅ Pull Request가 생성되었습니다!\n*<{problem_link}|PR 보러가기>*
-               
-        현재까지 {streak_data['submit_count']}개의 문제를 제출하셨습니다.
-        {streak_data['current_streak']}일 연속으로 문제를 풀고 계십니다!
-        (최대 {streak_data['max_streak']}일 연속 제출)
-        작성하신 리뷰: {streak_data['review_count']}개
-               """
-        )
+        # PR 본문 생성
+        if needs_review:
+            pr_body = f"""문제: [{problem_name}]({problem_link})
+언어: {language}
 
+## 풀이 과정
+{solution_process}
 
-        # Github 연동
-        g = Github(token)
+## 리뷰 요청 사항
+{review_request}
+"""
+        else:
+            pr_body = f"""문제: [{problem_name}]({problem_link})
+언어: {language}
 
-        github_user = g.get_user()
-        github_username = github_user.login
+## 풀이 과정
+{solution_process}
+"""
+        # PR 생성 및 처리
+        pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process)
 
-        # 사용자의 fork된 레포지토리 가져오기
-        user_fork = g.get_repo(f"{github_username}/daily-solvetto")
+        # PR 처리 후 메시지 전송
+        if needs_review:
+            # 채널에 PR 생성 메시지 전송
+            client.chat_postMessage(
+                channel=os.environ.get("SLACK_CHANNEL_ID"),
+                text=f"✨ 새로운 PR이 생성되었습니다!\n*<{pr.html_url}|[{language}] {problem_name}>*"
+            )
+        else:
+            # PR 자동 머지 후 채널에 메시지 전송
+            client.chat_postMessage(
+                channel=os.environ.get("SLACK_CHANNEL_ID"),
+                text=f"✅ [{problem_name}] 문제가 제출되었습니다!"
+            )
 
-        # 브랜치 이름 생성
-        branch_name = f"feature/algo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-
-        # base 브랜치(main) 가져오기
-        base_branch = user_fork.get_branch("main")
-
-        # 새 브랜치 생성
-        user_fork.create_git_ref(
-            ref=f"refs/heads/{branch_name}",
-            sha=base_branch.commit.sha
-        )
-
-        # 파일 경로 생성과 base64 인코딩
-        file_path = f"{problem_name}/{language.lower()}/solution.{get_file_extension(language)}"
-        content = base64.b64encode(code.encode('utf-8')).decode('utf-8')
-
-        geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
-        g_geultto = Github(geultto_token)
-        archive_repo = g_geultto.get_repo("geultto/daily-solvetto")
-
-        # 파일 생성
-        file_result = user_fork.create_file(
-            path=file_path,
-            message=f"Add solution for {problem_name}",
-            content=content,
-            branch=branch_name
-        )
-
-        # PR 생성
-        pr = archive_repo.create_pull(
-            base="main",
-            head=f"{github_username}:{branch_name}",
-            body=f"""
-        문제: {problem_link}
-        작성자: @{github_username}
-        언어: {language}
-        
-        이 PR은 Slack에서 자동으로 생성되었습니다.
-        파일: {file_path}
-        커밋: {file_result['commit'].sha}
-                """
-        )
-
-        # PR 생성 성공 메시지
-        client.chat_postMessage(
-            channel=channel_id,
-            text=f"✅ Pull Request가 생성되었습니다! 코드 리뷰 요청을 완료했습니다.\n*<{pr.html_url}|PR 보러가기>*"
-        )
+            # 스트릭 정보를 DM으로 전송
+            view_streak_message(body["user"]["id"], client)
 
     except Exception as e:
         client.chat_postMessage(
-            channel=channel_id,
+            channel=body["user"]["id"],
             text=f"❌ 오류가 발생했습니다: {str(e)}"
         )
 
+def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process):
+    # GitHub 토큰 읽기
+    user_name = body["user"]["username"]
+    with open(f'tokens/{user_name}.csv', 'r') as file:
+        reader = csv.reader(file)
+        _, token = next(reader)
+
+    # GitHub 연동
+    g = Github(token)
+    github_user = g.get_user()
+    github_username = github_user.login
+
+    # fork된 레포지토리 가져오기
+    user_fork = g.get_repo(f"{github_username}/daily-solvetto")
+
+    # 브랜치 이름 생성
+    branch_name = f"feature/algo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+    # base 브랜치의 최신 커밋 SHA 가져오기
+    base_branch = user_fork.get_branch("main")
+
+    # 새 브랜치 생성
+    user_fork.create_git_ref(
+        ref=f"refs/heads/{branch_name}",
+        sha=base_branch.commit.sha
+    )
+
+    # 파일 경로 생성
+    file_path = f"{directory}/{problem_name}.{get_file_extension(language)}"
+
+    # 파일 내용 base64 인코딩
+    content = base64.b64encode(solution_process.encode('utf-8')).decode('utf-8')
+
+    # fork된 레포지토리에 파일 생성
+    file_result = user_fork.create_file(
+        path=file_path,
+        message=f"Add solution for {problem_name}",
+        content=content,
+        branch=branch_name
+    )
+
+    # PR 생성
+    geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
+    g_geultto = Github(geultto_token)
+    archive_repo = g_geultto.get_repo("geultto/daily-solvetto")
+
+    pr = archive_repo.create_pull(
+        title=f"[{language}] {problem_name}",
+        body=pr_body,
+        head=f"{github_username}:{branch_name}",
+        base="main"
+    )
+
+    if not needs_review:
+        try:
+            wait_for_mergeable(pr)
+            pr.merge(
+                commit_title=f"Merge: [{language}] {problem_name}",
+                commit_message="Auto-merged by Slack bot",
+                merge_method="squash"
+            )
+        except Exception as e:
+            raise Exception(f"PR 머지 중 오류 발생: {str(e)}")
+
+    return pr
+
+def wait_for_mergeable(pr, timeout=30, interval=2):
+    """PR이 머지 가능한 상태가 될 때까지 대기"""
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        pr.update()  # PR 정보 갱신
+        if pr.mergeable:
+            return True
+        time.sleep(interval)
+
+    raise Exception("PR이 머지 가능한 상태가 되지 않았습니다.")
+
 def get_file_extension(language):
+    """언어별 파일 확장자 반환"""
     extensions = {
         "java": "java",
         "javascript": "js",
@@ -332,7 +464,31 @@ def get_file_extension(language):
     }
     return extensions.get(language.lower(), "txt")
 
+def view_streak_message(user_id, client):
+    """스트릭 정보를 DM으로 전송"""
+    try:
+        df = pd.read_csv(f'streak/{user_id}.csv')
+        if df.empty:
+            return "아직 제출 기록이 없습니다."
+
+        df['submit_date'] = pd.to_datetime(df['submit_date']).dt.date
+        last_row = df.iloc[-1]
+
+        message = f"""*스트릭 현황:*
+현재 연속 제출: {last_row['current_streak']}일
+최대 연속 제출: {last_row['max_streak']}일
+이번 제출 포인트: {last_row['total_points']}점 (기본: {last_row['base_points']}점 + 보너스: {last_row['bonus_points']}점)
+누적 포인트: {last_row['accumulated_points']}점
+"""
+        client.chat_postMessage(
+            channel=user_id,
+            text=message
+        )
+    except Exception as e:
+        print(f"스트릭 메시지 전송 중 오류: {str(e)}")
+
 def init_streak_directory():
+    """스트릭 데이터 저장을 위한 디렉토리 생성"""
     if not os.path.exists('streak'):
         os.makedirs('streak')
 
@@ -353,14 +509,20 @@ def calculate_points(df, today):
         elif current_streak >= 3:
             bonus_points += 5
 
-        # 주간 제출 보너스 계산
-        week_start = today - timedelta(days=today.weekday())
-        week_submissions = df[df['submit_date'] >= week_start]['submit_date'].nunique()
-        if week_submissions >= 5:
-            bonus_points += 15
-
     total_points = base_points + bonus_points
     return total_points, base_points, bonus_points
+
+
+@app.view("submission_with_review")
+def handle_review_submission(ack, body, view, client):
+    ack()
+    handle_submission(body, view, client, needs_review=True)
+
+@app.view("submission_without_review")
+def handle_no_review_submission(ack, body, view, client):
+    ack()
+    handle_submission(body, view, client, needs_review=False)
+
 
 def save_streak_data(user_id, user_name, problem_link, code):
     init_streak_directory()
