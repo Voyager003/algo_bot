@@ -89,6 +89,7 @@ def handle_token_submission(ack, body, view, client):
     ack()
 
     user_name = body['user']['username']
+    user_id = body['user']['id']
     token = view['state']['values']['token_block']['token_input']['value']
     csv_path = f'tokens/{user_name}.csv'
 
@@ -97,9 +98,9 @@ def handle_token_submission(ack, body, view, client):
             writer = csv.writer(file)
             writer.writerow([user_name, token])
 
-        client.chat_postMessage(
-            channel=body['user']['id'],
-            text="토큰이 성공적으로 등록되었습니다."
+        client.chat_postEphemeral(
+            channel=body['container']['channel_id'],  # 채널 ID
+            text="✨ GitHub 토큰이 성공적으로 등록되었습니다!"
         )
     except Exception as e:
         client.chat_postMessage(
