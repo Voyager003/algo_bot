@@ -173,7 +173,7 @@ def show_review_modal(body, client):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "directory_input",
-                        "placeholder": {"type": "plain_text", "text": "예: ChoYoonUn/javascript"}
+                        "placeholder": {"type": "plain_text", "text": "디렉토리 명을 지정해주세요."}
                     },
                     "label": {"type": "plain_text", "text": "디렉토리 경로"}
                 },
@@ -210,6 +210,17 @@ def show_review_modal(body, client):
                         ]
                     },
                     "label": {"type": "plain_text", "text": "언어"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "code",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "code_input",
+                        "multiline": True,
+                        "placeholder": {"type": "plain_text", "text": "코드를 입력하세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "코드"}
                 },
                 {
                     "type": "input",
@@ -292,6 +303,17 @@ def show_no_review_modal(body, client):
                 },
                 {
                     "type": "input",
+                    "block_id": "code",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "code_input",
+                        "multiline": True,
+                        "placeholder": {"type": "plain_text", "text": "코드를 입력하세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "코드"}
+                },
+                {
+                    "type": "input",
                     "block_id": "solution_process",
                     "element": {
                         "type": "plain_text_input",
@@ -307,21 +329,10 @@ def show_no_review_modal(body, client):
 
 def handle_submission(body, view, client, needs_review):
 
-    channel_id = body["user"]["id"]
-    user_name = body["user"]["username"]
-
     try:
-        with open(f'tokens/{user_name}.csv', 'r') as file:
-            reader = csv.reader(file)
-            _, token = next(reader)
-    except Exception as e:
-        client.chat_postMessage(
-            channel=channel_id,
-            text="토큰을 찾을 수 없습니다. '/알고토큰' 명령어로 먼저 토큰을 등록해주세요."
-        )
-        return
+        channel_id = body["user"]["id"]  # DM용 채널 ID
+        public_channel_id = "C081J5M7UUC"
 
-    try:
         # 입력값 추출
         values = view["state"]["values"]
         directory = values["directory_name"]["directory_input"]["value"]
@@ -329,6 +340,7 @@ def handle_submission(body, view, client, needs_review):
         problem_link = values["problem_link"]["link_input"]["value"]
         language = values["language"]["language_select"]["selected_option"]["value"]
         solution_process = values["solution_process"]["process_input"]["value"]
+        code = values["code"]["code_input"]["value"]  # 코드 추출
         review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
 
         # PR 본문 생성
@@ -350,24 +362,27 @@ def handle_submission(body, view, client, needs_review):
 {solution_process}
 """
         # PR 생성 및 처리
-        pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process)
+        pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, code)
 
         # PR 처리 후 메시지 전송
         if needs_review:
             # 채널에 PR 생성 메시지 전송
             client.chat_postMessage(
-                channel=os.environ.get("SLACK_CHANNEL_ID"),
-                text=f"✨ 새로운 PR이 생성되었습니다!\n*<{pr.html_url}|[{language}] {problem_name}>*"
+                channel=public_channel_id,  # 공개 채널에 메시지 전송
+                text=f"✨ 코드 리뷰 요청이 들어왔습니다!\n*<{pr.html_url}|[{language}] {problem_name}>*"
             )
         else:
             # PR 자동 머지 후 채널에 메시지 전송
             client.chat_postMessage(
-                channel=os.environ.get("SLACK_CHANNEL_ID"),
+                channel=public_channel_id,  # 공개 채널에 메시지 전송
                 text=f"✅ [{problem_name}] 문제가 제출되었습니다!"
             )
 
             # 스트릭 정보를 DM으로 전송
-            view_streak_message(body["user"]["id"], client)
+            client.chat_postMessage(
+                channel=channel_id,  # DM으로 스트릭 정보 전송
+                text=view_streak_message(body["user"]["id"])
+            )
 
     except Exception as e:
         client.chat_postMessage(
@@ -375,7 +390,7 @@ def handle_submission(body, view, client, needs_review):
             text=f"❌ 오류가 발생했습니다: {str(e)}"
         )
 
-def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process):
+def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, code):
     # GitHub 토큰 읽기
     user_name = body["user"]["username"]
     with open(f'tokens/{user_name}.csv', 'r') as file:
@@ -405,14 +420,11 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
     # 파일 경로 생성
     file_path = f"{directory}/{problem_name}.{get_file_extension(language)}"
 
-    # 파일 내용 base64 인코딩
-    content = base64.b64encode(solution_process.encode('utf-8')).decode('utf-8')
-
     # fork된 레포지토리에 파일 생성
     file_result = user_fork.create_file(
         path=file_path,
         message=f"Add solution for {problem_name}",
-        content=content,
+        content=code,
         branch=branch_name
     )
 
@@ -669,12 +681,12 @@ def view_streak(ack, body, client):
                     current_streak = 0
 
         # 8. 결과 메시지 생성
-        message = f"""*이번 주의 스트릭:*
+        message = f"""*이번 주의 스트릭이에요!:*
 {" ".join(streak)}
 
-총 제출: {total_submissions}개
-현재 연속 제출: {current_streak}일
-최대 연속 제출: {max_streak}일
+총 제출한 코드는 {total_submissions}개이며
+지금 진행되고 있는 연속 제출일은 {current_streak}일
+최대로 이어진 연속 제출은 {max_streak}일 입니다!
 """
 
         client.chat_postEphemeral(
