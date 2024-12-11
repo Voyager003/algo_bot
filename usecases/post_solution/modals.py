@@ -45,9 +45,9 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "directory_input",
-                    "placeholder": {"type": "plain_text", "text": "디렉토리 명을 지정해주세요."}
+                    "placeholder": {"type": "plain_text", "text": "영문이름을 입력해주세요."}
                 },
-                "label": {"type": "plain_text", "text": "디렉토리 경로"}
+                "label": {"type": "plain_text", "text": "영문이름"}
             },
             {
                 "type": "input",
@@ -133,9 +133,9 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "directory_input",
-                        "placeholder": {"type": "plain_text", "text": "디렉토리 명을 지정해주세요."}
+                        "placeholder": {"type": "plain_text", "text": "영문이름을 입력해주세요."}
                     },
-                    "label": {"type": "plain_text", "text": "디렉토리 경로"}
+                    "label": {"type": "plain_text", "text": "영문이름"}
                 },
                 {
                     "type": "input",
