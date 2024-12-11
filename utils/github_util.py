@@ -8,11 +8,6 @@ from configs import language_extensions_dict
 
 def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code):
 
-    geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
-    g_geultto = Github(geultto_token)
-    archive_repo = g_geultto.get_repo("geultto/daily-solvetto")
-
-    # 사용자 토큰으로 fork된 레포지토리 작업
     user_name = body["user"]["username"]
     with open(f'tokens/{user_name}.csv', 'r') as file:
         reader = csv.reader(file)
@@ -43,6 +38,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
     )
 
     # PR 생성은 Geultto 토큰
+    archive_repo = g_user.get_repo("geultto/daily-solvetto")
     pr = archive_repo.create_pull(
         title=f"[{language}] {problem_name}",
         body=pr_body,
