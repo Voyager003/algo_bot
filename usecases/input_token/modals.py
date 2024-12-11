@@ -7,7 +7,7 @@ def show_input_token_modal(body ,client, callback_id):
         callback_id=callback_id,
         title="Github 토큰 등록",
         submit_title="등록",
-        blokcs=[
+        blocks=[
             {
                 "type": "section",
                 "text": {
