@@ -1,4 +1,5 @@
 from utils.slack_util import show_modal
+from configs import language_extensions_dict
 
 def show_select_review_required_modal(body ,client, callback_id):
     show_modal(
@@ -77,7 +78,7 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
                     "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
                     "options": [
                         {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
-                        for lang in ["Java", "JavaScript", "Python", "Swift", "Kotlin", "Rust"]
+                        for lang in language_extensions_dict.keys()
                     ]
                 },
                 "label": {"type": "plain_text", "text": "언어"}
@@ -165,7 +166,7 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                         "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
                         "options": [
                             {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
-                            for lang in ["Java", "JavaScript", "Python", "Swift", "Kotlin", "Rust"]
+                            for lang in language_extensions_dict.keys()
                         ]
                     },
                     "label": {"type": "plain_text", "text": "언어"}

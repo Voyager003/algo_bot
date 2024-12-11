@@ -4,6 +4,7 @@ import time
 
 from datetime import datetime
 from github import Github
+from configs import language_extensions_dict
 
 def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, code):
     # GitHub 토큰 읽기
@@ -80,13 +81,4 @@ def wait_for_mergeable(pr, timeout=30, interval=2):
     raise Exception("PR이 머지 가능한 상태가 되지 않았습니다.")
 
 def get_file_extension(language):
-    """언어별 파일 확장자 반환"""
-    extensions = {
-        "java": "java",
-        "javascript": "js",
-        "python": "py",
-        "swift": "swift",
-        "kotlin": "kt",
-        "rust": "rs"
-    }
-    return extensions.get(language.lower(), "txt")
+    return language_extensions_dict.get(language.lower(), "txt")
