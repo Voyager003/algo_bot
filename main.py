@@ -1,6 +1,5 @@
 import os
 import csv
-import base64
 import pandas as pd
 import time
 
@@ -13,6 +12,7 @@ from github import Github
 load_dotenv(verbose=True)
 
 app = App(token=os.environ["SLACK_BOT_TOKEN"])
+ALGO_CHANNEL_ID = "C080JCY5X6F"
 
 if not os.path.exists('tokens'):
     os.makedirs('tokens')
@@ -20,6 +20,14 @@ if not os.path.exists('tokens'):
 @app.command("/알고토큰")
 def handle_token_command(ack, body, client):
     ack()
+
+    if body["channel_id"] != ALGO_CHANNEL_ID:
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=body["user_id"],
+            text="#오늘도한문제풀었또 채널에서만 사용할 수 있는 명령어입니다."
+        )
+        return
 
     user_name = body['user_name']
     csv_path = f'tokens/{user_name}.csv'
@@ -111,6 +119,15 @@ def handle_token_submission(ack, body, view, client):
 @app.command("/알고풀이")
 def handle_submit_command(ack, body, client):
     ack()
+    if body["channel_id"] != ALGO_CHANNEL_ID:
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=body["user_id"],
+            text="#오늘도한문제풀었또 채널에서만 사용할 수 있는 명령어입니다."
+        )
+        return
+
+
     try:
         client.views_open(
             trigger_id=body["trigger_id"],
@@ -609,6 +626,13 @@ def save_streak_data(user_id, user_name, problem_link, code):
 @app.command("/알고조회")
 def view_streak(ack, body, client):
     ack()
+    if body["channel_id"] != ALGO_CHANNEL_ID:
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=body["user_id"],
+            text="#오늘도한문제풀었또 채널에서만 사용할 수 있는 명령어입니다."
+        )
+        return
 
     user_id = body["user_id"]
     user_name = body["user_name"]
