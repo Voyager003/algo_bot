@@ -1,3 +1,5 @@
+from configs import CHANNEL_ID
+
 def send_public_message(client, channel, message:str):
     client.chat_postMessage(
         channel,
@@ -6,7 +8,7 @@ def send_public_message(client, channel, message:str):
 
 def send_private_message(body, client, message:str):
     client.chat_postEphemeral(
-        channel=body['channel_id'],
+        channel=CHANNEL_ID,
         user=body['user_id'],
         text=message
     )

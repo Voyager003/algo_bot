@@ -1,12 +1,10 @@
+from configs import CHANNEL_ID
 from utils.status_util import save_streak_data
 from utils.github_util import create_and_merge_pr
-from utils.slack_util import send_public_message
 from utils.error_handler import print_error
 
 def handle_submission(body, view, client, needs_review):
     try:
-        channel_id = body["user"]["id"]  # DM용 채널 ID
-        public_channel_id = "C081J5M7UUC"
 
         # 입력값 추출
         values = view["state"]["values"]
@@ -24,6 +22,11 @@ def handle_submission(body, view, client, needs_review):
             problem_link=problem_link,
             code=code
         )
+
+        message_body = {
+            'channel_id': CHANNEL_ID,
+            'user_id': body['user']['id']
+        }
 
         # PR 본문 생성
         if needs_review:
@@ -45,16 +48,23 @@ def handle_submission(body, view, client, needs_review):
 """
         pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, code)
 
+        user_id = body['user']['id']
+
         if needs_review:
-            send_public_message(
-                public_channel_id,
-                f"✨ 코드 리뷰 요청이 들어왔습니다!\n*<{pr.html_url}|[{language}] {problem_name}>*"
+            client.chat_postMessage(
+                channel=CHANNEL_ID,
+                text=f"✨ 코드 리뷰 요청이 들어왔습니다!\n*<{pr.html_url}|[{language}] {problem_name}>*"
             )
         else:
-            send_public_message(
-                public_channel_id,
-                f"✅ [{problem_name}] 문제가 제출되었습니다!"
+            client.chat_postEphemeral(
+                channel=CHANNEL_ID,
+                user=user_id,
+                text=f"✅ [{problem_name}] 문제가 제출되었습니다!"
             )
 
     except Exception as e:
-        print_error(body, client, f"❌ 오류가 발생했습니다: {str(e)}")
+        message_body = {
+            'channel_id': CHANNEL_ID,
+            'user_id': body['user']['id']
+        }
+        print_error(message_body, client, f"❌ 오류가 발생했습니다: {str(e)}")

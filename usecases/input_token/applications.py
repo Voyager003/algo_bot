@@ -1,4 +1,3 @@
-from app import app
 import csv
 import os
 from utils.error_handler import print_error
@@ -26,18 +25,37 @@ def init_token_handlers(app):
 
     @app.view("token_submission")
     def handle_token_submission(ack, body, view, client):
+        # 먼저 ack를 호출
         ack()
 
-        user_name = body['user']['username']
-        token = view['state']['values']['token_block']['token_input']['value']
-        csv_path = f'tokens/{user_name}.csv'
-
         try:
+            # tokens 디렉토리가 없으면 생성
+            if not os.path.exists('tokens'):
+                os.makedirs('tokens')
+
+            user_name = body['user']['username']
+            user_id = body['user']['id']  # DM용 채널 ID
+            token = view['state']['values']['token_block']['token_input']['value']
+            csv_path = f'tokens/{user_name}.csv'
+
             with open(csv_path, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow([user_name, token])
 
-            send_private_message(body, client, "✨ GitHub 토큰이 성공적으로 등록되었습니다!")
+            # body를 조작하여 send_private_message가 작동하도록 함
+            message_body = {
+                'channel_id': user_id,
+                'user_id': user_id
+            }
+            send_private_message(message_body, client, "✨ GitHub 토큰이 성공적으로 등록되었습니다!")
 
         except Exception as e:
-            print_error(body, client, f"토큰 등록 중 오류가 발생했습니다: {str(e)}")
+            try:
+                message_body = {
+                    'channel_id': user_id,
+                    'user_id': user_id
+                }
+                send_private_message(message_body, client, f"❌ 토큰 등록 중 오류가 발생했습니다: {str(e)}")
+            except:
+                # 에러 로깅만 하고 진행
+                print(f"Error sending message: {str(e)}")
