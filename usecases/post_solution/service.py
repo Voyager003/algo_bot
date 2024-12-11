@@ -2,6 +2,7 @@ from configs import CHANNEL_ID
 from utils.status_util import save_streak_data
 from utils.github_util import create_and_merge_pr
 from utils.error_handler import print_error
+from utils.slack_util import send_public_message
 
 def handle_submission(body, view, client, needs_review):
     try:
@@ -13,8 +14,10 @@ def handle_submission(body, view, client, needs_review):
         problem_link = values["problem_link"]["link_input"]["value"]
         language = values["language"]["language_select"]["selected_option"]["value"]
         solution_process = values["solution_process"]["process_input"]["value"]
-        code = values["code"]["code_input"]["value"]  # 코드 추출
+        code = values["code"]["code_input"]["value"]
         review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
+        submission_comment = values["submission_comment"]["comment_input"]["value"]
+        user_name = body["user"]["name"]
 
         streak_data = save_streak_data(
             user_id=body["user"]["id"],
@@ -46,20 +49,21 @@ def handle_submission(body, view, client, needs_review):
 ## 풀이 과정
 {solution_process}
 """
-        pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, code)
+        pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
 
         user_id = body['user']['id']
 
         if needs_review:
-            client.chat_postMessage(
+            send_public_message(
+                client=client,
                 channel=CHANNEL_ID,
-                text=f"✨ 코드 리뷰 요청이 들어왔습니다!\n*<{pr.html_url}|[{language}] {problem_name}>*"
+                message=f"@{user_name} 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\"\n리뷰도 함께 부탁하셨어요. ({pr.html_url})"
             )
         else:
-            client.chat_postEphemeral(
+            send_public_message(
+                client=client,
                 channel=CHANNEL_ID,
-                user=user_id,
-                text=f"✅ [{problem_name}] 문제가 제출되었습니다!"
+                message=f"@{user_name} 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\""
             )
 
     except Exception as e:

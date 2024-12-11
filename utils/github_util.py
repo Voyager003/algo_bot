@@ -6,7 +6,7 @@ from datetime import datetime
 from github import Github
 from configs import language_extensions_dict
 
-def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, code, directory):
+def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code):
 
     geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
     g_geultto = Github(geultto_token)

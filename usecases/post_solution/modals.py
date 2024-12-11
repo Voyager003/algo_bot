@@ -115,6 +115,17 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
                     "placeholder": {"type": "plain_text", "text": "중점적으로 리뷰받고 싶은 부분을 적어주세요."}
                 },
                 "label": {"type": "plain_text", "text": "리뷰 요청 사항"}
+            },
+            {
+                "type": "input",
+                "block_id": "submission_comment",
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "comment_input",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "제출 코멘트를 입력해주세요"}
+                },
+                "label": {"type": "plain_text", "text": "제출 코멘트"}
             }
         ],
     )
@@ -192,6 +203,17 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                         "placeholder": {"type": "plain_text", "text": "문제 풀이 과정을 설명해주세요"}
                     },
                     "label": {"type": "plain_text", "text": "풀이 과정"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "submission_comment",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "comment_input",
+                        "multiline": True,
+                        "placeholder": {"type": "plain_text", "text": "제출 코멘트를 입력해주세요"}
+                    },
+                    "label": {"type": "plain_text", "text": "제출 코멘트"}
                 }
             ],
     )

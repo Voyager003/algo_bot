@@ -1,9 +1,9 @@
 from configs import CHANNEL_ID
 
-def send_public_message(client, channel, message:str):
+def send_public_message(client, channel, message: str):
     client.chat_postMessage(
-        channel,
-        message,
+        channel=channel,
+        text=message
     )
 
 def send_private_message(body, client, message:str):
