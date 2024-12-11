@@ -8,7 +8,7 @@ def show_select_review_required_modal(body ,client, callback_id):
         callback_id=callback_id,
         title="알고리즘 풀이 제출",
         submit_title="다음",
-        blokcs=[
+        blocks=[
             {
                 "type": "input",
                 "block_id": "need_review",
@@ -38,7 +38,7 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
         callback_id=callback_id,
         title="알고리즘 풀이 제출",
         submit_title="제출",
-        blokcs=[
+        blocks=[
             {
                 "type": "input",
                 "block_id": "directory_name",
@@ -126,7 +126,7 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
         callback_id=callback_id,
         title="알고리즘 풀이 제출",
         submit_title="제출",
-        blokcs=[
+        blocks=[
                 {
                     "type": "input",
                     "block_id": "directory_name",
