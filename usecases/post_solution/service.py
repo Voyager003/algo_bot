@@ -51,16 +51,17 @@ def handle_submission(body, view, client, needs_review):
         pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
 
         if needs_review:
+            pr_url = pr.html_url.replace("https://", "")
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\"\n리뷰도 함께 부탁하셨어요. ({pr.html_url})"
+                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n\":speech_balloon: {submission_comment}\"\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
             )
         else:
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\""
+                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요!\n[{language}] {problem_name} \n\":speech_balloon: {submission_comment}\""
             )
 
     except Exception as e:
