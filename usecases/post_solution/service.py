@@ -52,14 +52,14 @@ def handle_submission(body, view, client, needs_review):
 
         if needs_review:
             pr_url = pr.html_url.replace("https://", "")
-            send_public_message(
-                client=client,
+            client.chat_postEphemeral(
+                user=body["user"]["id"],
                 channel=CHANNEL_ID,
                 message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\"\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
             )
         else:
-            send_public_message(
-                client=client,
+            client.chat_postEphemeral(
+                user=body["user"]["id"],
                 channel=CHANNEL_ID,
                 message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요!\n[{language}] {problem_name} \n:speech_balloon: \"{submission_comment}\""
             )
