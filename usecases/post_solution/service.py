@@ -17,7 +17,6 @@ def handle_submission(body, view, client, needs_review):
         code = values["code"]["code_input"]["value"]
         review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
         submission_comment = values["submission_comment"]["comment_input"]["value"]
-        user_name = body["user"]["name"]
 
         streak_data = save_streak_data(
             user_id=body["user"]["id"],
@@ -51,19 +50,17 @@ def handle_submission(body, view, client, needs_review):
 """
         pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
 
-        user_id = body['user']['id']
-
         if needs_review:
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"@{user_name} 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\"\n리뷰도 함께 부탁하셨어요. ({pr.html_url})"
+                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\"\n리뷰도 함께 부탁하셨어요. ({pr.html_url})"
             )
         else:
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"@{user_name} 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\""
+                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요.\n\"{submission_comment}\""
             )
 
     except Exception as e:
