@@ -15,7 +15,10 @@ def handle_submission(body, view, client, needs_review):
         solution_process = values["solution_process"]["process_input"]["value"]
         code = values["code"]["code_input"]["value"]
         review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
-        submission_comment = values["submission_comment"]["comment_input"]["value"]
+
+        # 제출 코멘트 - 비어있으면 default
+        raw_comment = values.get("submission_comment", {}).get("comment_input", {}).get("value")
+        submission_comment = "오늘도 알고리즘 문제를 풀었습니다! 👋" if not raw_comment or not raw_comment.strip() else raw_comment
 
         streak_data = save_streak_data(
             user_id=body["user"]["id"],
@@ -23,11 +26,6 @@ def handle_submission(body, view, client, needs_review):
             problem_link=problem_link,
             code=code
         )
-
-        message_body = {
-            'channel_id': CHANNEL_ID,
-            'user_id': body['user']['id']
-        }
 
         # PR 본문 생성
         pr_body = f"""문제: [{problem_name}]({problem_link})\n언어: {language}\n"""
@@ -40,24 +38,21 @@ def handle_submission(body, view, client, needs_review):
 
         pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
 
-        text = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요"
-        text += f"\n[{language}] {problem_name}"
-        
-        if submission_comment:
-            text += f"\n:speech_balloon: \"{submission_comment}\""
+        # 기본 메시지 구성
+        base_message = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\""
 
         if needs_review:
             pr_url = pr.html_url.replace("https://", "")
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\"\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
+                message=f"{base_message}\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
             )
         else:
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요!\n[{language}] {problem_name} \n:speech_balloon: \"{submission_comment}\""
+                message=base_message
             )
 
     except Exception as e:
