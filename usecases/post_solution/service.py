@@ -42,6 +42,7 @@ def handle_submission(body, view, client, needs_review):
 
         text = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요"
         text += f"\n[{language}] {problem_name}"
+
         
         if submission_comment:
             text += f"\n:speech_balloon: \"{submission_comment}\""
