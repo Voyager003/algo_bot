@@ -6,7 +6,6 @@ from utils.slack_util import send_public_message
 
 def handle_submission(body, view, client, needs_review):
     try:
-
         # 입력값 추출
         values = view["state"]["values"]
         directory = values["directory_name"]["directory_input"]["value"]
@@ -31,40 +30,31 @@ def handle_submission(body, view, client, needs_review):
         }
 
         # PR 본문 생성
-        if needs_review:
-            pr_body = f"""문제: [{problem_name}]({problem_link})
-언어: {language}
+        pr_body = f"""문제: [{problem_name}]({problem_link})\n언어: {language}\n"""
 
-## 풀이 과정
-{solution_process}
+        if solution_process:
+            pr_body += f"\n## 풀이 과정\n{solution_process}"
 
-## 리뷰 요청 사항
-{review_request}
-"""
-        else:
-            pr_body = f"""문제: [{problem_name}]({problem_link})
-언어: {language}
+        if needs_review and review_request:
+            pr_body += f"\n## 리뷰 요청 사항\n{review_request}"
 
-## 풀이 과정
-{solution_process}
-"""
         pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
+
+        text = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요"
+        text += f"\n[{language}] {problem_name}"
+        
+        if submission_comment:
+            text += f"\n:speech_balloon: \"{submission_comment}\""
 
         if needs_review:
             pr_url = pr.html_url.replace("https://", "")
-            text = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\"\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
-            client.chat_postEphemeral(
-                    user=body["user"]["id"],
-                    channel=CHANNEL_ID,
-                    text=text,
-            )
-        else:
-            text=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요!\n[{language}] {problem_name} \n:speech_balloon: \"{submission_comment}\""
-            client.chat_postEphemeral(
-                user=body["user"]["id"],
-                channel=CHANNEL_ID,
-                text=text,
-            )
+            text += f"\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
+
+        send_public_message(
+            client=client,
+            channel=CHANNEL_ID,
+            text=text,
+        )
 
     except Exception as e:
         message_body = {
