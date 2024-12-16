@@ -42,22 +42,21 @@ def handle_submission(body, view, client, needs_review):
 
         text = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요"
         text += f"\n[{language}] {problem_name}"
-        
-        if submission_comment:
-            text += f"\n:speech_balloon: \"{submission_comment}\""
+
+        base_message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\""
 
         if needs_review:
             pr_url = pr.html_url.replace("https://", "")
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\"\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
+                message=f"{base_message}\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
             )
         else:
             send_public_message(
                 client=client,
                 channel=CHANNEL_ID,
-                message=f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요!\n[{language}] {problem_name} \n:speech_balloon: \"{submission_comment}\""
+                message=base_message
             )
 
     except Exception as e:

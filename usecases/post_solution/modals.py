@@ -131,6 +131,7 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "comment_input",
+                    "initial_value": "오늘도 알고리즘 문제를 풀었습니다! 👋",
                     "multiline": True,
                     "placeholder": {"type": "plain_text", "text": "제출 코멘트를 입력해주세요"}
                 },
@@ -221,6 +222,7 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "comment_input",
+                        "initial_value": "오늘도 알고리즘 문제를 풀었습니다! 👋",
                         "multiline": True,
                         "placeholder": {"type": "plain_text", "text": "제출 코멘트를 입력해주세요"}
                     },
