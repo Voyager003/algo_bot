@@ -1,6 +1,7 @@
 from utils.slack_util import show_modal
 from configs import language_extensions_dict
 
+# https://api.slack.com/reference/block-kit/block-elements#radio
 def show_select_review_required_modal(body ,client, callback_id):
     show_modal(
         body=body,
@@ -15,6 +16,10 @@ def show_select_review_required_modal(body ,client, callback_id):
                 "element": {
                     "type": "radio_buttons",
                     "action_id": "review_select",
+                    "initial_option": {
+                        "text": {"type": "plain_text", "text": "예! 리뷰가 필요해요"},
+                        "value": "yes"
+                    },
                     "options": [
                         {
                             "text": {"type": "plain_text", "text": "예! 리뷰가 필요해요"},
@@ -31,6 +36,7 @@ def show_select_review_required_modal(body ,client, callback_id):
         ],
     )
 
+# https://api.slack.com/reference/block-kit/blocks#input
 def show_post_solution_with_review_modal(body ,client, callback_id):
     show_modal(
         body=body,
@@ -97,6 +103,7 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
             {
                 "type": "input",
                 "block_id": "solution_process",
+                "optional": True,
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "process_input",
@@ -108,6 +115,7 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
             {
                 "type": "input",
                 "block_id": "review_request",
+                "optional": True,
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "request_input",
@@ -119,6 +127,7 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
             {
                 "type": "input",
                 "block_id": "submission_comment",
+                "optional": True,
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "comment_input",
@@ -196,6 +205,7 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                 {
                     "type": "input",
                     "block_id": "solution_process",
+                    "optional": True,
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "process_input",
@@ -207,6 +217,7 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                 {
                     "type": "input",
                     "block_id": "submission_comment",
+                    "optional": True,
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "comment_input",
