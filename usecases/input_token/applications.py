@@ -25,7 +25,6 @@ def init_token_handlers(app):
 
     @app.view("token_submission")
     def handle_token_submission(ack, body, view, client):
-        # 먼저 ack를 호출
         ack()
 
         try:
