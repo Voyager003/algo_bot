@@ -23,7 +23,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         user_fork = g_user.get_repo(f"{github_username}/daily-solvetto")
         print(f"[DEBUG] 4. Fork된 레포지토리 접근 성공: {github_username}/daily-solvetto")
 
-        branch_name = f"feature/algo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        branch_name = f"submit-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         base_branch = user_fork.get_branch("main")
         print(f"[DEBUG] 5. 브랜치 이름 생성: {branch_name}")
 
@@ -44,21 +44,8 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         )
         print("[DEBUG] 8. 파일 생성 완료")
 
-        # 사용자 토큰으로 merge 시도
         try:
-            print("[DEBUG] 9. 사용자 토큰으로 PR 생성 시도")
-            archive_repo_user = g_user.get_repo("geultto/daily-solvetto")
-            pr = archive_repo_user.create_pull(
-                title=f"[{language}] {problem_name}",
-                body=pr_body,
-                head=f"{github_username}:{branch_name}",
-                base="main"
-            )
-            print("[DEBUG] 10. 사용자 토큰으로 PR 생성 성공")
-        except Exception as e:
-            print(f"[DEBUG] Error: 사용자 토큰으로 PR 생성 실패: {str(e)}")
-            print("[DEBUG] 11. Geultto 토큰으로 PR 생성 시도")
-            # PR 생성은 GEULTTO_GITHUB_TOKEN으로
+            print("[DEBUG] 9. PR 생성 시도")
             geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
             g_geultto = Github(geultto_token)
             archive_repo = g_geultto.get_repo("geultto/daily-solvetto")
@@ -68,23 +55,46 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
                 head=f"{github_username}:{branch_name}",
                 base="main"
             )
-            print("[DEBUG] 12. Geultto 토큰으로 PR 생성 성공")
+            print("[DEBUG] 10. PR 생성 성공")
 
-        if not needs_review:
-            try:
-                print("[DEBUG] 13. PR 머지 시도")
-                wait_for_mergeable(pr)
-                pr.merge(
-                    commit_title=f"Merge: [{language}] {problem_name}",
-                    commit_message="Auto-merged by Slack bot",
-                    merge_method="squash"
-                )
-                print("[DEBUG] 14. PR 머지 성공")
-            except Exception as e:
-                print(f"[DEBUG] Error: PR 머지 실패: {str(e)}")
-                raise Exception(f"PR 머지 중 오류 발생: {str(e)}")
+            if needs_review:
+                try:
+                    print("[DEBUG] 10-1. 라벨 확인 및 추가 시도")
+                    labels = archive_repo.get_labels()
+                    label_names = [label.name for label in labels]
 
-        return pr
+                    if "review required" not in label_names:
+                        archive_repo.create_label(
+                            name="review required",
+                            color="d4c5f9",
+                            description="리뷰가 필요한 PR"
+                        )
+                        print("[DEBUG] 10-2. review required 라벨 생성 완료")
+
+                    pr.add_to_labels("review required")
+                    print("[DEBUG] 10-3. PR에 review required 라벨 추가 완료")
+
+                except Exception as e:
+                    print(f"[DEBUG] Warning: 라벨 처리 중 오류 발생: {str(e)}")
+            else:
+                try:
+                    print("[DEBUG] 11. PR 머지 시도")
+                    wait_for_mergeable(pr)
+                    pr.merge(
+                        commit_title=f"Merge: [{language}] {problem_name}",
+                        commit_message="Auto-merged by Slack bot",
+                        merge_method="squash"
+                    )
+                    print("[DEBUG] 12. PR 머지 성공")
+                except Exception as e:
+                    print(f"[DEBUG] Error: PR 머지 실패: {str(e)}")
+                    raise Exception(f"PR 머지 중 오류 발생: {str(e)}")
+
+            return pr
+
+        except Exception as e:
+            print(f"[DEBUG] Error: PR 생성 실패: {str(e)}")
+            raise Exception(f"PR 생성 중 오류 발생: {str(e)}")
 
     except Exception as e:
         print(f"[DEBUG] Critical Error: {str(e)}")
