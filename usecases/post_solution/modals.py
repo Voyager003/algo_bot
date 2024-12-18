@@ -1,7 +1,6 @@
 from utils.slack_util import show_modal
 from configs import language_extensions_dict
 
-# https://api.slack.com/reference/block-kit/block-elements#radio
 def show_select_review_required_modal(body ,client, callback_id):
     show_modal(
         body=body,
@@ -36,7 +35,6 @@ def show_select_review_required_modal(body ,client, callback_id):
         ],
     )
 
-# https://api.slack.com/reference/block-kit/blocks#input
 def show_post_solution_with_review_modal(body ,client, callback_id):
     show_modal(
         body=body,
@@ -51,9 +49,9 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "directory_input",
-                    "placeholder": {"type": "plain_text", "text": "영문이름을 입력해주세요."}
+                    "placeholder": {"type": "plain_text", "text": "영어 이름을 입력하세요"}
                 },
-                "label": {"type": "plain_text", "text": "영문이름"}
+                "label": {"type": "plain_text", "text": "영어 이름"}
             },
             {
                 "type": "input",
@@ -147,85 +145,85 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
         title="알고리즘 풀이 제출",
         submit_title="제출",
         blocks=[
-                {
-                    "type": "input",
-                    "block_id": "directory_name",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "directory_input",
-                        "placeholder": {"type": "plain_text", "text": "영문이름을 입력해주세요."}
-                    },
-                    "label": {"type": "plain_text", "text": "영문이름"}
+            {
+                "type": "input",
+                "block_id": "directory_name",
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "directory_input",
+                    "placeholder": {"type": "plain_text", "text": "영어 이름을 입력하세요"}
                 },
-                {
-                    "type": "input",
-                    "block_id": "problem_name",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "problem_input",
-                        "placeholder": {"type": "plain_text", "text": "문제 이름을 입력하세요"}
-                    },
-                    "label": {"type": "plain_text", "text": "문제"}
+                "label": {"type": "plain_text", "text": "영어 이름"}
+            },
+            {
+                "type": "input",
+                "block_id": "problem_name",
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "problem_input",
+                    "placeholder": {"type": "plain_text", "text": "문제 이름을 입력하세요"}
                 },
-                {
-                    "type": "input",
-                    "block_id": "problem_link",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "link_input",
-                        "placeholder": {"type": "plain_text", "text": "문제 링크를 입력하세요"}
-                    },
-                    "label": {"type": "plain_text", "text": "문제 링크"}
+                "label": {"type": "plain_text", "text": "문제"}
+            },
+            {
+                "type": "input",
+                "block_id": "problem_link",
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "link_input",
+                    "placeholder": {"type": "plain_text", "text": "문제 링크를 입력하세요"}
                 },
-                {
-                    "type": "input",
-                    "block_id": "language",
-                    "element": {
-                        "type": "static_select",
-                        "action_id": "language_select",
-                        "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
-                        "options": [
-                            {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
-                            for lang in language_extensions_dict.keys()
-                        ]
-                    },
-                    "label": {"type": "plain_text", "text": "언어"}
+                "label": {"type": "plain_text", "text": "문제 링크"}
+            },
+            {
+                "type": "input",
+                "block_id": "language",
+                "element": {
+                    "type": "static_select",
+                    "action_id": "language_select",
+                    "placeholder": {"type": "plain_text", "text": "언어를 선택하세요"},
+                    "options": [
+                        {"text": {"type": "plain_text", "text": lang}, "value": lang.lower()}
+                        for lang in language_extensions_dict.keys()
+                    ]
                 },
-                {
-                    "type": "input",
-                    "block_id": "code",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "code_input",
-                        "multiline": True,
-                        "placeholder": {"type": "plain_text", "text": "코드를 입력하세요"}
-                    },
-                    "label": {"type": "plain_text", "text": "코드"}
+                "label": {"type": "plain_text", "text": "언어"}
+            },
+            {
+                "type": "input",
+                "block_id": "code",
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "code_input",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "코드를 입력하세요"}
                 },
-                {
-                    "type": "input",
-                    "block_id": "solution_process",
-                    "optional": True,
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "process_input",
-                        "multiline": True,
-                        "placeholder": {"type": "plain_text", "text": "문제 풀이 과정을 설명해주세요"}
-                    },
-                    "label": {"type": "plain_text", "text": "풀이 과정"}
+                "label": {"type": "plain_text", "text": "코드"}
+            },
+            {
+                "type": "input",
+                "block_id": "solution_process",
+                "optional": True,
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "process_input",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "문제 풀이 과정을 설명해주세요"}
                 },
-                {
-                    "type": "input",
-                    "block_id": "submission_comment",
-                    "optional": True,
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "comment_input",
-                        "multiline": True,
-                        "placeholder": {"type": "plain_text", "text": "제출 코멘트를 입력해주세요"}
-                    },
-                    "label": {"type": "plain_text", "text": "제출 코멘트"}
-                }
-            ],
+                "label": {"type": "plain_text", "text": "풀이 과정"}
+            },
+            {
+                "type": "input",
+                "block_id": "submission_comment",
+                "optional": True,
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "comment_input",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "제출 코멘트를 입력해주세요"}
+                },
+                "label": {"type": "plain_text", "text": "제출 코멘트"}
+            }
+        ],
     )
 

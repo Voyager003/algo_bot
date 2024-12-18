@@ -1,4 +1,5 @@
 from configs import CHANNEL_ID
+from utils.directory_util import normalize_directory_name
 from utils.status_util import save_streak_data
 from utils.github_util import create_and_merge_pr
 from utils.error_handler import print_error
@@ -6,9 +7,10 @@ from utils.slack_util import send_public_message
 
 def handle_submission(body, view, client, needs_review):
     try:
-        # 입력값 추출
         values = view["state"]["values"]
-        directory = values["directory_name"]["directory_input"]["value"]
+
+        raw_directory = values["directory_name"]["directory_input"]["value"]
+        directory = normalize_directory_name(raw_directory)
         problem_name = values["problem_name"]["problem_input"]["value"]
         problem_link = values["problem_link"]["link_input"]["value"]
         language = values["language"]["language_select"]["selected_option"]["value"]

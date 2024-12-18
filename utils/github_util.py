@@ -9,7 +9,6 @@ from configs import language_extensions_dict
 def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code):
     try:
         print("[DEBUG] 1. 사용자 토큰 읽기 시도")
-        # 사용자의 GitHub 토큰으로 fork된 레포지토리 작업
         user_name = body["user"]["username"]
         with open(f'tokens/{user_name}.csv', 'r') as file:
             reader = csv.reader(file)
@@ -46,9 +45,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         )
         print("[DEBUG] 8. 파일 생성 완료")
 
-        # 사용자 토큰으로 merge 시도
         try:
-            print("[DEBUG] 9. 사용자 토큰으로 PR 생성 시도")
             archive_repo_user = g_user.get_repo("geultto/daily-solvetto")
             pr = archive_repo_user.create_pull(
                 title=f"[{language}] {problem_name}",
