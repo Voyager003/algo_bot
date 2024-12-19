@@ -29,7 +29,6 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         user_fork = g_user.get_repo(f"{github_username}/daily-solvetto")
         print(f"[DEBUG] 4. Fork된 레포지토리 접근 성공: {github_username}/daily-solvetto")
 
-        timestamp = datetime.now().strftime('%H%M')
         branch_name = f"submit-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         base_branch = user_fork.get_branch("main")
         print(f"[DEBUG] 5. 브랜치 이름 생성: {branch_name}")
@@ -40,8 +39,9 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         )
         print("[DEBUG] 6. 새 브랜치 생성 완료")
 
-        normalized_problem_name = f"{problem_name.replace(' ', '').lower()}_{timestamp}"
-        file_path = f"{directory}/{language.lower()}/{normalized_problem_name}.{get_file_extension(language)}"
+        timestamp = datetime.now().strftime('%H%M')
+        file_name = f"{problem_name}_{timestamp}"
+        file_path = f"{directory}/{language.lower()}/{file_name}.{get_file_extension(language)}"
         print(f"[DEBUG] 7. 파일 경로 생성: {file_path}")
 
         file_result = user_fork.create_file(
@@ -65,7 +65,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
             )
             print("[DEBUG] 10. PR 생성 성공")
 
-            file_url = get_file_url(archive_repo, file_path, branch_name, needs_review)
+            file_url = get_file_url(archive_repo, file_path, f"{github_username}:{branch_name}", needs_review)
             pr_result = {
                 'pr': pr,
                 'file_url': file_url

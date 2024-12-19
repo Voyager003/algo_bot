@@ -1,5 +1,3 @@
-import datetime
-
 from configs import CHANNEL_ID
 from utils.directory_util import normalize_directory_name
 from utils.status_util import save_streak_data
@@ -7,13 +5,8 @@ from utils.github_util import create_and_merge_pr
 from utils.error_handler import print_error
 from utils.slack_util import send_public_message
 
-def normalize_filename(name, timestamp):
-    base_name = name.replace(" ", "").lower()
-    return f"{base_name}_{timestamp}"
-
-def get_timestamp():
-    now = datetime.datetime.now()
-    return f"{now.hour:02d}{now.minute:02d}"
+def normalize_filename(name):
+    return name.replace(" ", "").lower()
 
 def handle_submission(body, view, client, needs_review):
     try:
@@ -38,9 +31,7 @@ def handle_submission(body, view, client, needs_review):
             code=code
         )
 
-        timestamp = get_timestamp()
-        normalized_problem_name = normalize_filename(problem_name, timestamp)
-
+        normalized_problem_name = normalize_filename(problem_name)
         pr_body = f"""문제: [{problem_name}]({problem_link})\n언어: {language}\n"""
 
         if solution_process:
