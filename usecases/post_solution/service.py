@@ -1,9 +1,19 @@
+import datetime
+
 from configs import CHANNEL_ID
 from utils.directory_util import normalize_directory_name
 from utils.status_util import save_streak_data
 from utils.github_util import create_and_merge_pr
 from utils.error_handler import print_error
 from utils.slack_util import send_public_message
+
+def normalize_filename(name, timestamp):
+    base_name = name.replace(" ", "").lower()
+    return f"{base_name}_{timestamp}"
+
+def get_timestamp():
+    now = datetime.datetime.now()
+    return f"{now.hour:02d}{now.minute:02d}"
 
 def handle_submission(body, view, client, needs_review):
     try:
@@ -18,7 +28,6 @@ def handle_submission(body, view, client, needs_review):
         code = values["code"]["code_input"]["value"]
         review_request = values.get("review_request", {}).get("request_input", {}).get("value", "")
 
-        # 제출 코멘트 - 비어있으면 default
         raw_comment = values.get("submission_comment", {}).get("comment_input", {}).get("value")
         submission_comment = "오늘도 알고리즘 문제를 풀었습니다! 👋" if not raw_comment or not raw_comment.strip() else raw_comment
 
@@ -29,7 +38,9 @@ def handle_submission(body, view, client, needs_review):
             code=code
         )
 
-        # PR 본문 생성
+        timestamp = get_timestamp()
+        normalized_problem_name = normalize_filename(problem_name, timestamp)
+
         pr_body = f"""문제: [{problem_name}]({problem_link})\n언어: {language}\n"""
 
         if solution_process:
@@ -38,24 +49,28 @@ def handle_submission(body, view, client, needs_review):
         if needs_review and review_request:
             pr_body += f"\n## 리뷰 요청 사항\n{review_request}"
 
-        pr = create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
+        pr_result = create_and_merge_pr(body, normalized_problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code)
+        pr = pr_result['pr']
+        file_url = pr_result['file_url'].replace("https://", "")
+        pr_url = pr.html_url.replace("https://", "")
 
-        # 기본 메시지 구성
-        base_message = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요\n[{language}] {problem_name}\n:speech_balloon: \"{submission_comment}\""
+        problem_md_link = f"<{problem_link}|{problem_name}>"
+
+        main_message = [
+            f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요. ({file_url})",
+            f"[{language}] {problem_md_link}",
+            f":speech_balloon: \"{submission_comment}\" ({pr_url})"
+        ]
 
         if needs_review:
-            pr_url = pr.html_url.replace("https://", "")
-            send_public_message(
-                client=client,
-                channel=CHANNEL_ID,
-                message=f"{base_message}\n:white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})"
-            )
-        else:
-            send_public_message(
-                client=client,
-                channel=CHANNEL_ID,
-                message=base_message
-            )
+            main_message[-1] = f":speech_balloon: \"{submission_comment}\""
+            main_message.append(f":white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})")
+
+        send_public_message(
+            client=client,
+            channel=CHANNEL_ID,
+            message="\n".join(main_message)
+        )
 
     except Exception as e:
         message_body = {
