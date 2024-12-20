@@ -48,14 +48,16 @@ def handle_submission(body, view, client, needs_review):
         problem_md_link = f"<{problem_link}|{problem_name}>"
 
         main_message = [
-            f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요. ({file_url})",
+            f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요.",
             f"[{language}] {problem_md_link}",
-            f":speech_balloon: \"{submission_comment}\" ({pr_url})"
+            f":speech_balloon: \"{submission_comment}\""
         ]
 
+        # 리뷰 여부에 따라 링크 추가
         if needs_review:
-            main_message[-1] = f":speech_balloon: \"{submission_comment}\""
             main_message.append(f":white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})")
+        else:
+            main_message[0] = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요. ({file_url})"
 
         send_public_message(
             client=client,
