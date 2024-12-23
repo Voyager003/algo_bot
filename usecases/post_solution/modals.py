@@ -49,9 +49,9 @@ def show_post_solution_with_review_modal(body ,client, callback_id):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "directory_input",
-                    "placeholder": {"type": "plain_text", "text": "영어 이름을 입력하세요"}
+                    "placeholder": {"type": "plain_text", "text": "예시: wongi, rimwongi "}
                 },
-                "label": {"type": "plain_text", "text": "영어 이름"}
+                "label": {"type": "plain_text", "text": "사용자 폴더 이름 (영문) - 입력하신 이름으로 개인 디렉토리가 생성됩니다."}
             },
             {
                 "type": "input",
@@ -151,9 +151,9 @@ def show_post_solution_without_review_modal(body ,client, callback_id):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "directory_input",
-                    "placeholder": {"type": "plain_text", "text": "영어 이름을 입력하세요"}
+                    "placeholder": {"type": "plain_text", "text": "예시: wongi, rimwongi "}
                 },
-                "label": {"type": "plain_text", "text": "영어 이름"}
+                "label": {"type": "plain_text", "text": "사용자 폴더 이름 (영문) - 입력하신 이름으로 개인 디렉토리가 생성됩니다."}
             },
             {
                 "type": "input",
