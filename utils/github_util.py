@@ -1,16 +1,19 @@
 import csv
 import time
 import os
+import urllib.parse
 
 from datetime import datetime
 from github import Github
 from configs import language_extensions_dict
 
 def get_file_url(archive_repo, file_path, branch_name, needs_review):
+    encoded_path = '/'.join(urllib.parse.quote(component) for component in file_path.split('/'))
+
     if needs_review:
-        return f"github.com/geultto/daily-solvetto/blob/{branch_name}/{file_path}"
+        return f"github.com/geultto/daily-solvetto/blob/{branch_name}/{encoded_path}"
     else:
-        return f"github.com/geultto/daily-solvetto/blob/main/{file_path}"
+        return f"github.com/geultto/daily-solvetto/blob/main/{encoded_path}"
 
 def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, directory, solution_process, submission_comment, code):
     try:
@@ -39,8 +42,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         )
         print("[DEBUG] 6. 새 브랜치 생성 완료")
 
-        timestamp = datetime.now().strftime('%H%M')
-        file_name = f"{problem_name}_{timestamp}"
+        file_name = f"{problem_name}"
         file_path = f"{directory}/{language.lower()}/{file_name}.{get_file_extension(language)}"
         print(f"[DEBUG] 7. 파일 경로 생성: {file_path}")
 
@@ -50,7 +52,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
             content=code,
             branch=branch_name
         )
-        print("[DEBUG] 8. 파일 생성 완료")
+        print("[DEBUG] 파일 생성 완료")
 
         try:
             print("[DEBUG] 9. PR 생성 시도")
@@ -73,7 +75,6 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
 
             if needs_review:
                 try:
-                    print("[DEBUG] 10-1. 라벨 확인 및 추가 시도")
                     labels = archive_repo.get_labels()
                     label_names = [label.name for label in labels]
 
@@ -83,23 +84,20 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
                             color="d4c5f9",
                             description="리뷰가 필요한 PR"
                         )
-                        print("[DEBUG] 10-2. review required 라벨 생성 완료")
-
                     pr.add_to_labels("review required")
-                    print("[DEBUG] 10-3. PR에 review required 라벨 추가 완료")
 
                 except Exception as e:
                     print(f"[DEBUG] Warning: 라벨 처리 중 오류 발생: {str(e)}")
             else:
                 try:
-                    print("[DEBUG] 11. PR 머지 시도")
+                    print("[DEBUG] PR 머지 시도")
                     wait_for_mergeable(pr)
                     pr.merge(
                         commit_title=f"Merge: [{language}] {problem_name}",
                         commit_message="Auto-merged by Slack bot",
                         merge_method="squash"
                     )
-                    print("[DEBUG] 12. PR 머지 성공")
+                    print("[DEBUG] PR 머지 성공")
                 except Exception as e:
                     print(f"[DEBUG] Error: PR 머지 실패: {str(e)}")
                     raise Exception(f"PR 머지 중 오류 발생: {str(e)}")
