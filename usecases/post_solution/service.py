@@ -82,26 +82,26 @@ def handle_submission(body, view, client, needs_review):
             submission_comment,
             code
         )
-        pr = pr_result['pr']
-        file_url = pr_result['file_url'].replace("https://", "")
-        pr_url = pr.html_url.replace("https://", "")
-        print(f"[DEBUG] 12. PR 생성 완료 - URL: {pr_url}")
+        compare_url = pr_result['pr_url']
+        file_url = pr_result['file_url']
+        print(f"[DEBUG] 12. PR URL 생성 완료 - URL: {compare_url}")
 
         print("[DEBUG] 13. 슬랙 메시지 생성 시작")
         problem_md_link = f"<{problem_link}|{problem_name}>"
 
         main_message = [
-            f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요.",
+            f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요. ({file_url})",
             f"[{language}] {problem_md_link}",
             f":speech_balloon: \"{submission_comment}\""
         ]
 
         if needs_review:
-            main_message.append(f":white_check_mark: 리뷰도 함께 부탁하셨어요! ({pr_url})")
-            print("[DEBUG] 14. 리뷰 요청 메시지 추가됨")
+            main_message.append(f":white_check_mark: 리뷰도 함께 부탁하셨어요! PR을 생성하려면 다음 링크를 클릭해주세요: {compare_url}")
+            print("[DEBUG] 14. 리뷰 요청 메시지와 PR 링크 추가됨")
         else:
-            main_message[0] = f"<@{body['user']['id']}> 님이 오늘의 풀이를 공유해주셨어요. ({file_url})"
-            print("[DEBUG] 14. 일반 제출 메시지 구성됨")
+            # 리뷰가 필요 없는 경우에도 PR 생성 링크는 제공
+            main_message.append(f"PR을 생성하려면 다음 링크를 클릭해주세요: {compare_url}")
+            print("[DEBUG] 14. PR 생성 링크 추가됨")
 
         print("[DEBUG] 15. 슬랙 메시지 전송 시작")
         send_public_message(

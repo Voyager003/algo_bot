@@ -33,32 +33,18 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         user_fork = g_user.get_repo(f"{github_username}/daily-solvetto")
         print(f"[DEBUG] 4. Fork된 레포지토리 접근: {github_username}/daily-solvetto")
 
-        # upstream 레포지토리 접근
-        upstream_repo = g_user.get_repo("geultto/daily-solvetto")
-        print("[DEBUG] 5. Upstream 레포지토리 접근")
-
-        # Fork sync를 위해 upstream의 최신 커밋 가져오기
-        upstream_main = upstream_repo.get_branch("main")
-        print("[DEBUG] 6. Upstream main 브랜치 정보 획득")
-
-        # Fork의 main 브랜치를 upstream과 동기화
-        try:
-            user_fork.get_branch("main").edit(upstream_main.commit.sha)
-            print("[DEBUG] 7. Fork main 브랜치 동기화 완료")
-        except:
-            print("[DEBUG] 7. Fork main 브랜치 동기화 실패 - 계속 진행")
-
         # 새 브랜치 생성
         branch_name = f"feature/algo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        base_branch = user_fork.get_branch("main")
         user_fork.create_git_ref(
             ref=f"refs/heads/{branch_name}",
-            sha=upstream_main.commit.sha
+            sha=base_branch.commit.sha
         )
-        print(f"[DEBUG] 8. 새 브랜치 생성: {branch_name}")
+        print(f"[DEBUG] 5. 새 브랜치 생성: {branch_name}")
 
         # 파일 생성
         file_path = f"{directory}/{language.lower()}/{problem_name}.{get_file_extension(language)}"
-        print(f"[DEBUG] 9. 파일 경로 생성: {file_path}")
+        print(f"[DEBUG] 6. 파일 경로 생성: {file_path}")
 
         user_fork.create_file(
             path=file_path,
@@ -66,35 +52,25 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
             content=code,
             branch=branch_name
         )
-        print("[DEBUG] 10. 파일 생성 완료")
+        print("[DEBUG] 7. 파일 생성 완료")
 
-        try:
-            print("[DEBUG] 11. PR 생성 시도")
-            # upstream 레포지토리에 PR 생성
-            pr = upstream_repo.create_pull(
-                title=f"[{language}] {problem_name}",
-                body=pr_body,
-                head=f"{github_username}:{branch_name}",
-                base="main"
-            )
-            print("[DEBUG] 12. PR 생성 성공")
+        # GitHub UI를 통한 PR 생성 URL 생성
+        encoded_title = urllib.parse.quote(f"[{language}] {problem_name}")
+        encoded_body = urllib.parse.quote(pr_body)
+        compare_url = (
+            f"https://github.com/geultto/daily-solvetto/compare/main..."
+            f"{github_username}:{branch_name}?quick_pull=1"
+            f"&title={encoded_title}&body={encoded_body}"
+        )
+        print(f"[DEBUG] 8. PR 생성 URL 생성: {compare_url}")
 
-            file_url = get_file_url(upstream_repo, file_path, f"{github_username}:{branch_name}", needs_review)
-            pr_result = {
-                'pr': pr,
-                'file_url': file_url
-            }
+        file_url = f"github.com/{github_username}/daily-solvetto/blob/{branch_name}/{file_path}"
 
-            if needs_review:
-                _handle_review_labels(upstream_repo, pr)
-            else:
-                _handle_pr_merge(pr, language, problem_name)
-
-            return pr_result
-
-        except Exception as e:
-            print(f"[DEBUG] Error: PR 처리 실패: {str(e)}")
-            raise
+        return {
+            'pr_url': compare_url,
+            'file_url': file_url,
+            'branch_name': branch_name
+        }
 
     except Exception as e:
         print(f"[DEBUG] Critical Error: {str(e)}")
