@@ -29,105 +29,98 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         github_username = github_user.login
         print(f"[DEBUG] 3. GitHub 사용자 정보 획득: {github_username}")
 
-        # 사용자의 fork된 레포지토리 접근
         user_fork = g_user.get_repo(f"{github_username}/daily-solvetto")
-        print(f"[DEBUG] 4. Fork된 레포지토리 접근: {github_username}/daily-solvetto")
+        print(f"[DEBUG] 4. Fork된 레포지토리 접근 성공: {github_username}/daily-solvetto")
 
-        # 새 브랜치 생성
-        branch_name = f"feature/algo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        branch_name = f"submit-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         base_branch = user_fork.get_branch("main")
+        print(f"[DEBUG] 5. 브랜치 이름 생성: {branch_name}")
+
         user_fork.create_git_ref(
             ref=f"refs/heads/{branch_name}",
             sha=base_branch.commit.sha
         )
-        print(f"[DEBUG] 5. 새 브랜치 생성: {branch_name}")
+        print("[DEBUG] 6. 새 브랜치 생성 완료")
 
-        # 파일 생성
-        file_path = f"{directory}/{language.lower()}/{problem_name}.{get_file_extension(language)}"
-        print(f"[DEBUG] 6. 파일 경로 생성: {file_path}")
+        file_name = f"{problem_name}"
+        file_path = f"{directory}/{language.lower()}/{file_name}.{get_file_extension(language)}"
+        print(f"[DEBUG] 7. 파일 경로 생성: {file_path}")
 
-        user_fork.create_file(
+        file_result = user_fork.create_file(
             path=file_path,
             message=f"Add solution for {problem_name}",
             content=code,
             branch=branch_name
         )
-        print("[DEBUG] 7. 파일 생성 완료")
+        print("[DEBUG] 파일 생성 완료")
 
-        # GitHub UI를 통한 PR 생성 URL 생성
-        encoded_title = urllib.parse.quote(f"[{language}] {problem_name}")
-        encoded_body = urllib.parse.quote(pr_body)
-        compare_url = (
-            f"https://github.com/geultto/daily-solvetto/compare/main..."
-            f"{github_username}:{branch_name}?quick_pull=1"
-            f"&title={encoded_title}&body={encoded_body}"
-        )
-        print(f"[DEBUG] 8. PR 생성 URL 생성: {compare_url}")
+        try:
+            print("[DEBUG] 9. PR 생성 시도")
+            geultto_token = os.environ.get("GEULTTO_GITHUB_TOKEN")
+            g_geultto = Github(geultto_token)
+            archive_repo = g_geultto.get_repo("geultto/daily-solvetto")
+            pr = archive_repo.create_pull(
+                title=f"[{language}] {problem_name}",
+                body=pr_body,
+                head=f"{github_username}:{branch_name}",
+                base="main"
+            )
+            print("[DEBUG] 10. PR 생성 성공")
 
-        file_url = f"github.com/{github_username}/daily-solvetto/blob/{branch_name}/{file_path}"
+            file_url = get_file_url(archive_repo, file_path, f"{github_username}:{branch_name}", needs_review)
+            pr_result = {
+                'pr': pr,
+                'file_url': file_url
+            }
 
-        return {
-            'pr_url': compare_url,
-            'file_url': file_url,
-            'branch_name': branch_name
-        }
+            if needs_review:
+                try:
+                    labels = archive_repo.get_labels()
+                    label_names = [label.name for label in labels]
+
+                    if "review required" not in label_names:
+                        archive_repo.create_label(
+                            name="review required",
+                            color="d4c5f9",
+                            description="리뷰가 필요한 PR"
+                        )
+                    pr.add_to_labels("review required")
+
+                except Exception as e:
+                    print(f"[DEBUG] Warning: 라벨 처리 중 오류 발생: {str(e)}")
+            else:
+                try:
+                    print("[DEBUG] PR 머지 시도")
+                    wait_for_mergeable(pr)
+                    pr.merge(
+                        commit_title=f"Merge: [{language}] {problem_name}",
+                        commit_message="Auto-merged by Slack bot",
+                        merge_method="squash"
+                    )
+                    print("[DEBUG] PR 머지 성공")
+                except Exception as e:
+                    print(f"[DEBUG] Error: PR 머지 실패: {str(e)}")
+                    raise Exception(f"PR 머지 중 오류 발생: {str(e)}")
+
+            return pr_result
+
+        except Exception as e:
+            print(f"[DEBUG] Error: PR 생성 실패: {str(e)}")
+            raise Exception(f"PR 생성 중 오류 발생: {str(e)}")
 
     except Exception as e:
         print(f"[DEBUG] Critical Error: {str(e)}")
         raise Exception(f"PR 생성 중 오류 발생: {str(e)}")
 
-def _handle_review_labels(repo, pr):
-    """리뷰 라벨 처리"""
-    try:
-        print("[DEBUG] 리뷰 라벨 처리 - 라벨 확인")
-        try:
-            review_label = repo.get_label("review required")
-            print("[DEBUG] 기존 'review required' 라벨 찾음")
-        except:
-            review_label = repo.create_label(
-                name="review required",
-                color="d4c5f9",
-                description="리뷰가 필요한 PR"
-            )
-            print("[DEBUG] 새 'review required' 라벨 생성")
-
-        pr.add_to_labels(review_label)
-        print("[DEBUG] 'review required' 라벨 추가 완료")
-    except Exception as e:
-        print(f"[DEBUG] Warning: 라벨 처리 중 오류 발생: {str(e)}")
-
-def _handle_pr_merge(pr, language, problem_name):
-    """PR 머지 처리"""
-    try:
-        print("[DEBUG] 머지 가능 상태 확인 시작")
-        if wait_for_mergeable(pr):
-            print("[DEBUG] 머지 가능 상태 확인됨, 머지 시도")
-            pr.merge(
-                commit_title=f"Merge: [{language}] {problem_name}",
-                commit_message="Auto-merged by Slack bot",
-                merge_method="squash"
-            )
-            print("[DEBUG] 머지 완료")
-        else:
-            print("[DEBUG] Error: PR이 머지 가능한 상태가 아님")
-            raise Exception("PR이 머지 가능한 상태가 아닙니다")
-    except Exception as e:
-        print(f"[DEBUG] Error: PR 머지 실패: {str(e)}")
-        raise Exception(f"PR 머지 실패: {str(e)}")
-
 def wait_for_mergeable(pr, timeout=30, interval=2):
-    """PR이 머지 가능한 상태가 될 때까지 대기"""
-    print(f"[DEBUG] 머지 가능 상태 대기 시작 (최대 {timeout}초)")
     start_time = time.time()
     while time.time() - start_time < timeout:
         pr.update()
-        print(f"[DEBUG] PR 상태 확인: mergeable={pr.mergeable}")
         if pr.mergeable:
             return True
         time.sleep(interval)
-    print("[DEBUG] 머지 가능 상태 대기 시간 초과")
-    return False
+
+    raise Exception("PR이 머지 가능한 상태가 되지 않았습니다.")
 
 def get_file_extension(language):
-    """언어에 따른 파일 확장자 반환"""
     return language_extensions_dict.get(language.lower(), "txt")
