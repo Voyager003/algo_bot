@@ -41,12 +41,12 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
             _, user_token = next(reader)
         print(f"[DEBUG] 2. 사용자 토큰 읽기 성공: {user_name}")
 
-        fork_info = run_gh_command([
-            "gh", "repo", "view",
-            f"{user_name}/daily-solvetto",
-            "--json", "defaultBranchRef"
+        github_user = run_gh_command([
+            "gh", "api",
+            "user",
+            "--jq", ".login"
         ])
-        print(f"[DEBUG] 3. Fork 상태 확인 완료")
+        print(f"[DEBUG] 3. GitHub 사용자 정보 획득: {github_user}")
 
         # 브랜치명 생성
         branch_name = f"submit-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
@@ -55,7 +55,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         # upstream의 main SHA 가져오기
         main_sha = run_gh_command([
             "gh", "api",
-            "repos/geultto/daily-solvetto/git/refs/heads/main",
+            f"repos/{github_user}/daily-solvetto/git/refs/heads/main",
             "--jq", ".object.sha"
         ])
         print(f"[DEBUG] 5. Main 브랜치 SHA 획득: {main_sha}")
