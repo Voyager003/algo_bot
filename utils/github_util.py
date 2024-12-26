@@ -1,6 +1,4 @@
 import csv
-import time
-import os
 import base64
 import urllib.parse
 import subprocess
@@ -8,7 +6,6 @@ from datetime import datetime
 from configs import language_extensions_dict
 
 def run_gh_command(command, work_dir=None):
-    """GitHub CLI 명령어 실행"""
     print(f"[DEBUG] GitHub CLI 명령어 실행: {' '.join(command)}")
     try:
         result = subprocess.run(
@@ -47,16 +44,17 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
 
         # main 브랜치의 최신 commit SHA 가져오기
         main_sha = run_gh_command([
-            "gh", "api",
-            f"/repos/{user_name}/daily-solvetto/git/refs/heads/main",
-            "--jq", ".object.sha"
+            "gh", "repo", "view",
+            f"{user_name}/daily-solvetto",
+            "--json", "defaultBranchRef",
+            "--jq", ".defaultBranchRef.target.oid"
         ])
         print(f"[DEBUG] 4. Main 브랜치 SHA 획득: {main_sha}")
 
         # 새 브랜치 생성
         run_gh_command([
             "gh", "api",
-            f"/repos/{user_name}/daily-solvetto/git/refs",
+            f"repos/{user_name}/daily-solvetto/git/refs",
             "-X", "POST",
             "-f", f"ref=refs/heads/{branch_name}",
             "-f", f"sha={main_sha}"
@@ -69,7 +67,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
 
         run_gh_command([
             "gh", "api",
-            f"/repos/{user_name}/daily-solvetto/contents/{file_path}",
+            f"repos/{user_name}/daily-solvetto/contents/{file_path}",
             "-X", "PUT",
             "-f", f"message=Add solution for {problem_name}",
             "-f", f"content={file_content}",
