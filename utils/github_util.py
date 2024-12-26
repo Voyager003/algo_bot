@@ -44,10 +44,9 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
 
         # main 브랜치의 최신 commit SHA 가져오기
         main_sha = run_gh_command([
-            "gh", "repo", "view",
-            f"geultto/daily-solvetto",  # organization의 레포지토리 사용
-            "--json", "defaultBranchRef",
-            "--jq", ".defaultBranchRef.target.oid"
+            "gh", "api",
+            "repos/geultto/daily-solvetto/git/ref/heads/main",
+            "--jq", ".object.sha"
         ])
         print(f"[DEBUG] 4. Main 브랜치 SHA 획득: {main_sha}")
 
