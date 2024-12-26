@@ -48,7 +48,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         # fork된 레포지토리의 main SHA 가져오기
         main_sha = run_gh_command([
             "gh", "api",
-            f"repos/{user_name}/daily-solvetto/git/ref/heads/main",
+            f"repos/{user_name}/daily-solvetto/git/refs/heads/main",
             "--jq", ".object.sha"
         ])
         print(f"[DEBUG] 4. Main 브랜치 SHA 획득: {main_sha}")
