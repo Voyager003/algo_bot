@@ -45,10 +45,10 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         branch_name = f"submit-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         print(f"[DEBUG] 3. 브랜치명 생성: {branch_name}")
 
-        # main 브랜치의 최신 commit SHA 가져오기
+        # fork된 레포지토리의 main SHA 가져오기
         main_sha = run_gh_command([
             "gh", "api",
-            "repos/geultto/daily-solvetto/git/ref/heads/main",
+            f"repos/{user_name}/daily-solvetto/git/ref/heads/main",
             "--jq", ".object.sha"
         ])
         print(f"[DEBUG] 4. Main 브랜치 SHA 획득: {main_sha}")
@@ -58,13 +58,13 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
             # 기존 브랜치 확인
             run_gh_command([
                 "gh", "api",
-                f"repos/geultto/daily-solvetto/git/refs/heads/{branch_name}",
+                f"repos/{user_name}/daily-solvetto/git/refs/heads/{branch_name}",
             ])
 
             # 브랜치가 존재하면 삭제
             run_gh_command([
                 "gh", "api",
-                f"repos/geultto/daily-solvetto/git/refs/heads/{branch_name}",
+                f"repos/{user_name}/daily-solvetto/git/refs/heads/{branch_name}",
                 "-X", "DELETE"
             ])
             print(f"[DEBUG] 5. 기존 브랜치 삭제 완료: {branch_name}")
@@ -74,7 +74,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         # 새 브랜치 생성
         run_gh_command([
             "gh", "api",
-            "repos/geultto/daily-solvetto/git/refs",
+            f"repos/{user_name}/daily-solvetto/git/refs",
             "-X", "POST",
             "-f", f"ref=refs/heads/{branch_name}",
             "-f", f"sha={main_sha}"
@@ -87,7 +87,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
 
         run_gh_command([
             "gh", "api",
-            f"repos/geultto/daily-solvetto/contents/{file_path}",
+            f"repos/{user_name}/daily-solvetto/contents/{file_path}",
             "-X", "PUT",
             "-f", f"message=Add solution for {problem_name}",
             "-f", f"content={file_content}",
