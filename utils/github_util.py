@@ -1,4 +1,6 @@
 import csv
+import time
+import os
 import base64
 import urllib.parse
 import subprocess
@@ -6,6 +8,7 @@ from datetime import datetime
 from configs import language_extensions_dict
 
 def run_gh_command(command, work_dir=None):
+    """GitHub CLI 명령어 실행"""
     print(f"[DEBUG] GitHub CLI 명령어 실행: {' '.join(command)}")
     try:
         result = subprocess.run(
@@ -50,16 +53,33 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
         ])
         print(f"[DEBUG] 4. Main 브랜치 SHA 획득: {main_sha}")
 
+        # 브랜치 생성 전에 체크/삭제 로직
+        try:
+            # 기존 브랜치 확인
+            run_gh_command([
+                "gh", "api",
+                f"repos/geultto/daily-solvetto/git/refs/heads/{branch_name}",
+            ])
+
+            # 브랜치가 존재하면 삭제
+            run_gh_command([
+                "gh", "api",
+                f"repos/geultto/daily-solvetto/git/refs/heads/{branch_name}",
+                "-X", "DELETE"
+            ])
+            print(f"[DEBUG] 5. 기존 브랜치 삭제 완료: {branch_name}")
+        except Exception:
+            print("[DEBUG] 5. 새로운 브랜치 생성 가능")
+
         # 새 브랜치 생성
         run_gh_command([
             "gh", "api",
-            "repos/geultto/daily-solvetto/git/refs",  # organization 레포지토리 사용
+            "repos/geultto/daily-solvetto/git/refs",
             "-X", "POST",
             "-f", f"ref=refs/heads/{branch_name}",
             "-f", f"sha={main_sha}"
         ])
-
-        print(f"[DEBUG] 5. 브랜치 생성 완료")
+        print(f"[DEBUG] 6. 브랜치 생성 완료")
 
         # 파일 생성
         file_path = f"{directory}/{language.lower()}/{problem_name}.{get_file_extension(language)}"
@@ -67,17 +87,17 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
 
         run_gh_command([
             "gh", "api",
-            "repos/geultto/daily-solvetto/git/refs",  # organization 레포지토리 사용
-            "-X", "POST",
-            "-f", f"ref=refs/heads/{branch_name}",
-            "-f", f"sha={main_sha}"
+            f"repos/geultto/daily-solvetto/contents/{file_path}",
+            "-X", "PUT",
+            "-f", f"message=Add solution for {problem_name}",
+            "-f", f"content={file_content}",
+            "-f", f"branch={branch_name}"
         ])
-
-        print(f"[DEBUG] 6. 파일 생성 완료: {file_path}")
+        print(f"[DEBUG] 7. 파일 생성 완료: {file_path}")
 
         try:
             # PR 생성
-            print("[DEBUG] 7. PR 생성 시도")
+            print("[DEBUG] 8. PR 생성 시도")
             pr_url = run_gh_command([
                 "gh", "pr", "create",
                 "--repo", "geultto/daily-solvetto",
@@ -86,18 +106,18 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
                 "--title", f"[{language}] {problem_name}",
                 "--body", pr_body
             ])
-            print(f"[DEBUG] 8. PR 생성 완료: {pr_url}")
+            print(f"[DEBUG] 9. PR 생성 완료: {pr_url}")
 
             if needs_review:
-                print("[DEBUG] 9. 리뷰 라벨 추가 시도")
+                print("[DEBUG] 10. 리뷰 라벨 추가 시도")
                 run_gh_command([
                     "gh", "pr", "edit",
                     pr_url,
                     "--add-label", "review required"
                 ])
-                print("[DEBUG] 10. 리뷰 라벨 추가 완료")
+                print("[DEBUG] 11. 리뷰 라벨 추가 완료")
             else:
-                print("[DEBUG] 9. PR 머지 시도")
+                print("[DEBUG] 10. PR 머지 시도")
                 run_gh_command([
                     "gh", "pr", "merge",
                     pr_url,
@@ -105,7 +125,7 @@ def create_and_merge_pr(body, problem_name, language, pr_body, needs_review, dir
                     "--auto",
                     "--delete-branch"
                 ])
-                print("[DEBUG] 10. PR 머지 완료")
+                print("[DEBUG] 11. PR 머지 완료")
 
             # PR 객체 Mock 생성 (기존 코드와의 호환성)
             class PullRequestMock:
