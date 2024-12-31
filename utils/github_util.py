@@ -7,32 +7,41 @@ from github import Github, GithubIntegration, GithubException
 from configs import language_extensions_dict
 from dotenv import load_dotenv
 
-class GitHubAppAuth:
-    def __init__(self):
-        load_dotenv()
-        self.app_id = int(os.getenv("GITHUB_APP_ID"))
-        self.installation_id = int(os.getenv("GITHUB_INSTALLATION_ID"))
-        self.private_key_path = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH")
+def __init__(self):
+    load_dotenv()
+    self.app_id = int(os.getenv("GITHUB_APP_ID"))
+    self.installation_id = int(os.getenv("GITHUB_INSTALLATION_ID"))
+    self.private_key_path = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH")
 
-        if not all([self.app_id, self.installation_id, self.private_key_path]):
-            raise ValueError("Required environment variables are missing")
+    if not all([self.app_id, self.installation_id, self.private_key_path]):
+        print(f"[DEBUG] APP_ID: {self.app_id}")
+        print(f"[DEBUG] INSTALLATION_ID: {self.installation_id}")
+        print(f"[DEBUG] PRIVATE_KEY_PATH: {self.private_key_path}")
+        raise ValueError("Required environment variables are missing")
 
-        try:
-            print(f"[DEBUG] Private Key 파일 경로: {self.private_key_path}")
-            with open(self.private_key_path, 'r') as f:
-                self.private_key = f.read()
+    try:
+        print(f"[DEBUG] Private Key 파일 경로: {self.private_key_path}")
+        with open(self.private_key_path, 'r') as f:
+            self.private_key = f.read().strip()  # 앞뒤 공백 제거
 
-            print("[DEBUG] Private Key 읽기 성공:")
-            print(f"길이: {len(self.private_key)}")
+        print("[DEBUG] Private Key 읽기 성공:")
+        print(f"Private Key 시작: {self.private_key[:50]}")
+        print(f"Private Key 끝: {self.private_key[-50:]}")
 
-            self.integration = GithubIntegration(
-                integration_id=self.app_id,
-                private_key=self.private_key,
-            )
+        # 키가 올바른 형식인지 확인
+        if not (self.private_key.startswith('-----BEGIN RSA PRIVATE KEY-----') and
+                self.private_key.endswith('-----END RSA PRIVATE KEY-----')):
+            raise ValueError("Invalid PEM key format")
 
-        except Exception as e:
-            print(f"[DEBUG] GitHub App 초기화 중 에러 발생: {str(e)}")
-            raise
+        self.integration = GithubIntegration(
+            integration_id=self.app_id,
+            private_key=self.private_key,
+        )
+
+    except Exception as e:
+        print(f"[DEBUG] GitHub App 초기화 중 에러 발생: {str(e)}")
+        print(f"[DEBUG] Private Key Type: {type(self.private_key)}")
+        raise
 
     def get_github_client(self):
         """GitHub App 클라이언트 생성"""
