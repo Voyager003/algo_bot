@@ -11,39 +11,32 @@ class GitHubAppAuth:
         load_dotenv()
         self.app_id = int(os.getenv("GITHUB_APP_ID"))
         self.installation_id = int(os.getenv("GITHUB_INSTALLATION_ID"))
+        self.private_key_path = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH")  # 경로로 변경
 
-        # 1. 환경변수에서 직접 PEM 키 읽기 시도
-        self.private_key = os.getenv("GITHUB_APP_PRIVATE_KEY")
-
-        if not all([self.app_id, self.installation_id, self.private_key]):
+        if not all([self.app_id, self.installation_id, self.private_key_path]):
+            print(f"[DEBUG] APP_ID: {self.app_id}")
+            print(f"[DEBUG] INSTALLATION_ID: {self.installation_id}")
+            print(f"[DEBUG] PRIVATE_KEY_PATH: {self.private_key_path}")
             raise ValueError("Required environment variables are missing")
 
         try:
-            print("[DEBUG] GitHub App 인증 정보:")
-            print(f"[DEBUG] App ID: {self.app_id}")
-            print(f"[DEBUG] Installation ID: {self.installation_id}")
-            print(f"[DEBUG] Private Key 길이: {len(self.private_key)}")
-            print(f"[DEBUG] Private Key 시작: {self.private_key[:50]}...")
+            # 파일에서 PEM 키 읽기
+            print(f"[DEBUG] Private Key 파일 경로: {self.private_key_path}")
+            with open(self.private_key_path, 'r') as f:
+                self.private_key = f.read()
 
-            # 2. PEM 키 형식 처리
-            if '\\n' in self.private_key:
-                self.private_key = self.private_key.replace('\\n', '\n')
+            print("[DEBUG] Private Key 읽기 성공:")
+            print(f"길이: {len(self.private_key)}")
+            print(f"시작: {self.private_key[:50]}")
 
-            # 3. GithubIntegration 인스턴스 생성
+            # GithubIntegration 인스턴스 생성
             self.integration = GithubIntegration(
                 integration_id=self.app_id,
                 private_key=self.private_key,
-                base_url="https://api.github.com"
             )
-
-            # 4. JWT 토큰 생성 테스트
-            jwt_token = self.integration.create_jwt()
-            print(f"[DEBUG] JWT 토큰 생성 성공: {jwt_token[:50]}...")
 
         except Exception as e:
             print(f"[DEBUG] 초기화 중 에러 발생: {str(e)}")
-            if hasattr(e, 'response'):
-                print(f"[DEBUG] Response: {e.response.text}")
             raise
 
     def get_github_client(self):
