@@ -7,7 +7,32 @@ from configs import language_extensions_dict
 from dotenv import load_dotenv
 from github import Github, GithubException, GithubIntegration
 
+# .env 파일 로드
 load_dotenv()
+
+# 디버깅 로그 출력
+def debug_environment_variables():
+    try:
+        github_app_id = os.getenv("GITHUB_APP_ID")
+        github_installation_id = os.getenv("GITHUB_APP_INSTALLATION_ID")
+
+        print("[DEBUG] GITHUB_APP_ID (raw):", github_app_id)
+        print("[DEBUG] GITHUB_APP_INSTALLATION_ID (raw):", github_installation_id)
+
+        # 값 변환 시도
+        github_app_id_int = int(github_app_id) if github_app_id else None
+        github_installation_id_int = int(github_installation_id) if github_installation_id else None
+
+        print("[DEBUG] GITHUB_APP_ID (int):", github_app_id_int)
+        print("[DEBUG] GITHUB_APP_INSTALLATION_ID (int):", github_installation_id_int)
+
+    except ValueError as e:
+        print("[DEBUG] ValueError:", str(e))
+    except Exception as e:
+        print("[DEBUG] 일반 에러:", str(e))
+
+# 디버깅 함수 실행
+debug_environment_variables()
 
 class GitHubAppAuth:
     def __init__(self):
