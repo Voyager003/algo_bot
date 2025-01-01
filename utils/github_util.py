@@ -22,11 +22,15 @@ class GitHubAppAuth:
         try:
             with open(self.private_key_path, 'r') as f:
                 self.private_key = f.read()
-            # GithubIntegration 인스턴스 생성
+            print("[DEBUG] Private Key 읽기 성공")
+
             self.integration = GithubIntegration(
                 integration_id=self.app_id,
-                private_key=self.private_key,
+                private_key=self.private_key
             )
+            print("[DEBUG] GithubIntegration 인스턴스 생성 성공")
+        except Exception as e:
+            print(f"[DEBUG] 초기화 중 에러 발생: {str(e)}")
 
         except Exception as e:
             print(f"[DEBUG] 초기화 중 에러 발생: {str(e)}")
