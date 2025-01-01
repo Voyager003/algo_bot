@@ -10,9 +10,19 @@ from github import Github, GithubException, GithubIntegration
 class GitHubAppAuth:
     def __init__(self):
         load_dotenv()
+
+        print("[DEBUG] 현재 로드된 환경 변수:")
+        for key, value in os.environ.items():
+            print(f"{key}: {value}")
         self.app_id = int(os.getenv("GITHUB_APP_ID"))
         self.installation_id = int(os.getenv("GITHUB_APP_INSTALLATION_ID"))
-        self.private_key_path = os.path.join("key", "geultto-algobot.2024-12-30.private-key.pem")
+        self.app_id = int(os.getenv("GITHUB_APP_ID", 0))
+        self.installation_id = int(os.getenv("GITHUB_APP_INSTALLATION_ID", 0))
+
+        # 하드코딩된 경로 대신 환경 변수에서 읽어오기
+        self.private_key_path = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH",
+                                          os.path.join("key", "geultto-algobot.2024-12-30.private-key.pem"))
+
 
         if not all([self.app_id, self.installation_id, self.private_key_path]):
             raise ValueError("Required environment variables are missing")
