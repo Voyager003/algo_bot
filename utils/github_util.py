@@ -7,7 +7,8 @@ from configs import language_extensions_dict
 from github import Github, GithubException, GithubIntegration
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=env_path, override=True)
 
 class GitHubAppAuth:
     def __init__(self):
