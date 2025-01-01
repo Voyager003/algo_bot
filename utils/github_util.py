@@ -4,11 +4,10 @@ import time
 import urllib.parse
 from datetime import datetime
 from configs import language_extensions_dict
-from dotenv import load_dotenv
-from dotenv import dotenv_values
 from github import Github, GithubException, GithubIntegration
+from dotenv import load_dotenv
 
-env_values = dotenv_values(".env")
+load_dotenv()
 
 class GitHubAppAuth:
     def __init__(self):
