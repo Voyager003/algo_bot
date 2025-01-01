@@ -7,9 +7,10 @@ from configs import language_extensions_dict
 from dotenv import load_dotenv
 from github import Github, GithubException, GithubIntegration
 
+load_dotenv()
+
 class GitHubAppAuth:
     def __init__(self):
-        load_dotenv()
         self.app_id = int(os.getenv("GITHUB_APP_ID"))
         self.installation_id = int(os.getenv("GITHUB_APP_INSTALLATION_ID"))
         self.private_key_path = os.path.join("key", "geultto-algobot.2024-12-30.private-key.pem")
