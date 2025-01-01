@@ -12,7 +12,7 @@ class GitHubAppAuth:
         load_dotenv()
         self.app_id = int(os.getenv("GITHUB_APP_ID"))
         self.installation_id = int(os.getenv("GITHUB_APP_INSTALLATION_ID"))
-        self.private_key_path = os.getenv("GITHUB_PRIVATE_KEY_PATH")
+        self.private_key_path = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH")
 
         if not all([self.app_id, self.installation_id, self.private_key_path]):
             raise ValueError("Required environment variables are missing")
@@ -20,7 +20,6 @@ class GitHubAppAuth:
         try:
             with open(self.private_key_path, 'r') as f:
                 self.private_key = f.read()
-            # GithubIntegration 인스턴스 생성
             self.integration = GithubIntegration(
                 integration_id=self.app_id,
                 private_key=self.private_key,
