@@ -16,17 +16,17 @@ def show_select_review_required_modal(body ,client, callback_id):
                     "type": "radio_buttons",
                     "action_id": "review_select",
                     "initial_option": {
-                        "text": {"type": "plain_text", "text": "예! 리뷰가 필요해요"},
-                        "value": "yes"
+                        "text": {"type": "plain_text", "text": "아니요~ 괜찮아요"},
+                        "value": "no"
                     },
                     "options": [
                         {
-                            "text": {"type": "plain_text", "text": "예! 리뷰가 필요해요"},
-                            "value": "yes"
-                        },
-                        {
                             "text": {"type": "plain_text", "text": "아니요~ 괜찮아요"},
                             "value": "no"
+                        },
+                        {
+                            "text": {"type": "plain_text", "text": "네! 리뷰가 필요해요"},
+                            "value": "yes"
                         }
                     ]
                 },
